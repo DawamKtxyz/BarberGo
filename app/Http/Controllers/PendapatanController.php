@@ -5,13 +5,21 @@ use Illuminate\Http\Request;
 use App\Models\Pendapatan;
 use App\Models\Pesanan;
 use App\Models\TukangCukur;
+use Illuminate\Support\Facades\DB;
+
 
 class PendapatanController extends Controller
 {
     public function pendapatan(Request $request)
     {
-        // Ganti 'barber' jadi 'tukangCukur'
-        $query = Pesanan::with(['barber', 'pelanggan', 'jadwal', 'pendapatan']);
+        $query = Pesanan::select(
+            'id as id_pesanan',
+            DB::raw('(nominal + ongkos_kirim) as total_bayar'),
+            'tgl_pesanan as tanggal_bayar', // ✅ Tambahkan alias ini
+            'id_barber',
+            'id_pelanggan'
+        )->with(['barber', 'pelanggan', 'jadwal', 'pendapatan'])
+        ->where('status_pembayaran', 'paid'); // ✅ Hanya ambil yang sudah bayar
 
         if ($request->filled('barber')) {
             $query->where('id_barber', $request->barber);
