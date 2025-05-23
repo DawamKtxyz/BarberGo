@@ -21,7 +21,7 @@
                             <th>Email</th>
                             <th>No. Telepon</th>
                             <th>Alamat</th>
-                            <th>Tanggal Pesanan</th>
+                            <th>Tanggal Jadwal</th>
                             <th>Harga</th>
                             <th>Ongkir</th>
                             <th>Total</th>

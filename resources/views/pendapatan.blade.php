@@ -38,7 +38,7 @@
                         <th>ID Pendapatan</th>
                         <th>Nama Barber</th>
                         <th>Nama Pelanggan</th>
-                        <th>Tanggal Bayar</th>
+                        <th>Tanggal Jadwal</th>
                         <th>Nominal Bayar</th>
                     </tr>
                 </thead>
