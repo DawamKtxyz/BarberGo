@@ -25,7 +25,7 @@ class TukangCukur extends Authenticatable
         'profile_photo',
         'api_token',
         'persentase_komisi',
-
+        'rekening_barber', // Kolom baru untuk nomor rekening barber
     ];
 
     protected $hidden = [
@@ -40,8 +40,14 @@ class TukangCukur extends Authenticatable
     {
         return $this->hasMany(JadwalTukangCukur::class, 'tukang_cukur_id');
     }
+
     public function pesanans()
     {
         return $this->hasMany(Pesanan::class, 'id_barber');
+    }
+
+    public function penggajian()
+    {
+        return $this->hasMany(Penggajian::class, 'id_barber', 'id');
     }
 }

@@ -436,6 +436,9 @@
                 <a href="{{ route('pendapatan') }}" class="sidebar-link {{ request()->routeIs('pendapatan*') ? 'active' : '' }}">
                     <i class="fas fa-money-bill-wave"></i> Pendapatan
                 </a>
+                <a href="{{ route('penggajian.index') }}" class="sidebar-link {{ request()->routeIs('penggajian*') ? 'active' : '' }}">
+                      <i class="fas fa-money-bill-wave"></i> Penggajian
+                </a>
                 <a href="{{ route('laporan_penggajian.index') }}" class="sidebar-link {{ request()->routeIs('laporan_penggajian*') ? 'active' : '' }}">
                     <i class="fas fa-chart-bar"></i> Laporan Penggajian
                 </a>

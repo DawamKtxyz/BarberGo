@@ -45,7 +45,7 @@
                     </tr>
                     <tr>
                         <th>Tukang Cukur</th>
-                        <td>{{ $pesanan->tukangCukur->nama ?? '-' }}</td>
+                        <td>{{ $pesanan->barber->nama ?? '-' }}</td>
                     </tr>
                     <tr>
                         <th>Pelanggan</th>
@@ -130,11 +130,11 @@
                         <div class="card mt-2">
                             <div class="card-body">
                                 <p><strong>Bank BCA</strong></p>
-                                <p>No. Rekening: 1234567890</p>
-                                <p>Atas Nama: PT Barber Shop</p>
+                                <p>No. Rekening: 1251218574</p>
+                                <p>Atas Nama: Luthfan Dawami Ahmad</p>
                                 <p>Jumlah: Rp {{ number_format($pesanan->getTotalAmount(), 0, ',', '.') }}</p>
                                 <hr>
-                                <p class="text-muted">Setelah melakukan transfer, harap konfirmasi melalui WhatsApp ke nomor 081234567890 dengan menyertakan bukti transfer dan ID Transaksi: <strong>{{ $pesanan->id_transaksi }}</strong></p>
+                                <p class="text-muted">Setelah melakukan transfer, harap konfirmasi melalui WhatsApp ke nomor 081237832005 dengan menyertakan bukti transfer dan ID Transaksi: <strong>{{ $pesanan->id_transaksi }}</strong></p>
                             </div>
                         </div>
                     </div>

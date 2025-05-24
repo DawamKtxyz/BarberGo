@@ -50,6 +50,7 @@ class TukangCukurController extends Controller
             'telepon' => 'required|string|max:15',
             'spesialisasi' => 'nullable|string',
             'harga' => 'required|numeric|min:0', // Perubahan dari persentase_komisi
+            'rekening_barber' => 'nullable|string|max:50', // Validasi untuk rekening barber
             'password' => 'required|string|min:6|confirmed',
             'jadwal' => 'nullable|array',
             'jadwal.*.tanggal' => 'nullable|date',
@@ -136,6 +137,7 @@ class TukangCukurController extends Controller
             'telepon' => 'required|string|max:15',
             'spesialisasi' => 'nullable|string',
             'harga' => 'required|numeric|min:0', // Perubahan dari persentase_komisi
+            'rekening_barber' => 'nullable|string|max:50', // Validasi untuk rekening barber
             'password' => 'nullable|string|min:6|confirmed',
             'jadwal' => 'nullable|array',
             'jadwal.*.tanggal' => 'nullable|date',

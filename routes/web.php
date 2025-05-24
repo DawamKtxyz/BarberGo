@@ -9,6 +9,8 @@ use App\Http\Controllers\PelangganController;
 use App\Http\Controllers\LaporanPenggajianController;
 use App\Http\Controllers\PesananController;
 use App\Http\Controllers\PendapatanController;
+use App\Http\Controllers\PenggajianController;
+
 
 
 // Rute Auth
@@ -51,6 +53,15 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/pembayaran/finish', 'App\Http\Controllers\PembayaranController@finish')->name('pembayaran.finish');
         Route::get('/pembayaran/unfinish', 'App\Http\Controllers\PembayaranController@unfinish')->name('pembayaran.unfinish');
         Route::get('/pembayaran/error', 'App\Http\Controllers\PembayaranController@error')->name('pembayaran.error');
+
+        Route::prefix('penggajian')->name('penggajian.')->group(function () {
+            Route::get('/', [PenggajianController::class, 'index'])->name('index');
+            Route::post('/generate', [PenggajianController::class, 'generate'])->name('generate');
+            Route::post('/bayar', [PenggajianController::class, 'bayar'])->name('bayar');
+            Route::get('/{id}/edit', [PenggajianController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [PenggajianController::class, 'update'])->name('update');
+            Route::delete('/{id}', [PenggajianController::class, 'destroy'])->name('destroy');
+});
 });
 
 // Redirect root ke login

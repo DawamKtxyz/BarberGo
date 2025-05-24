@@ -48,6 +48,11 @@ class Pesanan extends Model
         return $this->hasOne(Pendapatan::class, 'id_pesanan');
     }
 
+    public function penggajian()
+    {
+        return $this->hasMany(Penggajian::class, 'id_pesanan', 'id');
+    }
+
      // Helper method to get total amount
     public function getTotalAmount()
     {

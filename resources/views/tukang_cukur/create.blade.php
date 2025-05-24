@@ -65,6 +65,16 @@
                 <small class="text-muted">Masukkan harga jasa potong rambut yang ditawarkan</small>
             </div>
 
+            <!-- Input baru untuk rekening barber -->
+            <div class="mb-3">
+                <label for="rekening_barber" class="form-label">Nomor Rekening Barber</label>
+                <input type="text" class="form-control @error('rekening_barber') is-invalid @enderror" id="rekening_barber" name="rekening_barber" value="{{ old('rekening_barber') }}" placeholder="Masukkan nomor rekening">
+                @error('rekening_barber')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <small class="text-muted">Nomor rekening untuk transfer pembayaran komisi</small>
+            </div>
+
             <div class="mb-3">
                 <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
                 <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" required>
