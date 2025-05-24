@@ -47,11 +47,8 @@
                         <tr>
                             <td>{{ $item->id_pesanan }}</td>
                             <td>
-                                @if($item->pendapatan)
-                                    {{ $item->pendapatan->id_pendapatan }}
-                                @else
-                                    <span class="text-muted">Belum ada</span>
-                                @endif
+                                {{-- Menggunakan ID pendapatan yang di-generate otomatis --}}
+                                {{ $item->id_pendapatan_generated ?? 'PD' . ($index + 1) }}
                             </td>
                             <td>
                                 @if($item->barber)
@@ -61,7 +58,6 @@
                                 @endif
                             </td>
                             <td>
-                                {{-- ✅ Perbaikan akses nama pelanggan --}}
                                 @if($item->pelanggan)
                                     {{ $item->pelanggan->nama }}
                                 @else
@@ -69,7 +65,6 @@
                                 @endif
                             </td>
                             <td>
-                                {{-- ✅ Sekarang menggunakan tanggal_bayar yang sudah di-alias --}}
                                 {{ \Carbon\Carbon::parse($item->tanggal_bayar)->format('d M Y') }}
                             </td>
                             <td>Rp {{ number_format($item->total_bayar, 0, ',', '.') }}</td>
@@ -83,7 +78,7 @@
             </table>
         </div>
 
-        {{-- ✅ Tambahan info total --}}
+        {{-- Info total --}}
         @if($pendapatan->count() > 0)
         <div class="mt-3">
             <strong>Total Pendapatan: Rp {{ number_format($pendapatan->sum('total_bayar'), 0, ',', '.') }}</strong>

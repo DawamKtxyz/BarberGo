@@ -7,7 +7,6 @@ use App\Models\Pesanan;
 use App\Models\TukangCukur;
 use Illuminate\Support\Facades\DB;
 
-
 class PendapatanController extends Controller
 {
     public function pendapatan(Request $request)
@@ -15,11 +14,11 @@ class PendapatanController extends Controller
         $query = Pesanan::select(
             'id as id_pesanan',
             DB::raw('(nominal + ongkos_kirim) as total_bayar'),
-            'tgl_pesanan as tanggal_bayar', // ✅ Tambahkan alias ini
+            'tgl_pesanan as tanggal_bayar',
             'id_barber',
             'id_pelanggan'
-        )->with(['barber', 'pelanggan', 'jadwal', 'pendapatan'])
-        ->where('status_pembayaran', 'paid'); // ✅ Hanya ambil yang sudah bayar
+        )->with(['barber', 'pelanggan', 'jadwal'])
+        ->where('status_pembayaran', 'paid'); // Hanya ambil yang sudah bayar
 
         if ($request->filled('barber')) {
             $query->where('id_barber', $request->barber);
@@ -32,6 +31,13 @@ class PendapatanController extends Controller
         }
 
         $pendapatan = $query->get();
+
+        // Generate ID pendapatan otomatis untuk setiap pesanan
+        $pendapatan = $pendapatan->map(function ($item, $index) {
+            $item->id_pendapatan_generated = 'PD' . ($index + 1);
+            return $item;
+        });
+
         $barbers = TukangCukur::all();
 
         return view('pendapatan', compact('pendapatan', 'barbers'));
@@ -39,7 +45,6 @@ class PendapatanController extends Controller
 
     public function pendapatanFromPendapatan(Request $request)
     {
-        // Ganti 'pesanan.barber' jadi 'pesanan.tukangCukur'
         $query = Pendapatan::with(['pesanan.barber', 'pesanan.pelanggan', 'tukang_cukur', 'pelanggan']);
 
         if ($request->filled('barber')) {
