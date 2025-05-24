@@ -33,7 +33,7 @@
                         @forelse($pesanan as $index => $l)
                             <tr>
                                 <td>{{ $index + $pesanan->firstItem() }}</td>
-                                <td>{{ $l->tukangCukur->nama ?? '-' }}</td>
+                                <td>{{ $l->barber->nama ?? '-' }}</td>
                                 <td>{{ $l->pelanggan->nama ?? '-' }}</td>
                                 <td>{{ $l->email ?? '-' }}</td>
                                 <td>{{ $l->telepon ?? '-' }}</td>
