@@ -47,7 +47,6 @@
                         <tr>
                             <td>{{ $item->id_pesanan }}</td>
                             <td>
-                                {{-- Menggunakan ID pendapatan yang di-generate otomatis --}}
                                 {{ $item->id_pendapatan_generated ?? 'PD' . ($index + 1) }}
                             </td>
                             <td>
