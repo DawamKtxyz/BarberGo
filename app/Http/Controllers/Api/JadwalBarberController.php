@@ -289,4 +289,10 @@ class JadwalBarberController extends Controller
             ], 500);
         }
     }
+
+    public function deleteMultiple(Request $request)
+{
+    JadwalTukangCukur::whereIn('id', $request->ids)->delete();
+    return response()->json(['message' => 'Jadwal berhasil dihapus']);
+}
 }

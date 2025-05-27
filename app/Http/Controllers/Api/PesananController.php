@@ -19,105 +19,81 @@ class PesananController extends Controller
      * Create a new booking (for customers)
      */
     public function store(Request $request)
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'id_barber' => 'required|exists:tukang_cukur,id',
-                'jadwal_id' => 'required|exists:jadwal_tukang_cukur,id',
-                'alamat_lengkap' => 'required|string',
-                'email' => 'required|email',
-                'telepon' => 'required|string',
-                'ongkos_kirim' => 'nullable|numeric|min:0',
-            ]);
+{
+    try {
+        $validator = Validator::make($request->all(), [
+            'id_barber' => 'required|exists:tukang_cukur,id',
+            'jadwal_id' => 'required|exists:jadwal_tukang_cukur,id',
+            'alamat_lengkap' => 'required|string|max:500',
+            'email' => 'required|email',
+            'telepon' => 'required|string|max:15',
+            'ongkos_kirim' => 'numeric|min:0',
+        ]);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            // Get the selected schedule
-            $jadwal = JadwalTukangCukur::with('tukangCukur')->find($request->jadwal_id);
-
-            // Verify that the schedule belongs to the specified barber
-            if ($jadwal->tukang_cukur_id != $request->id_barber) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Schedule does not belong to the specified barber'
-                ], 400);
-            }
-
-            // Check if the time slot is still available
-            $existingBooking = Pesanan::where('jadwal_id', $request->jadwal_id)->first();
-            if ($existingBooking) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This time slot is already booked'
-                ], 400);
-            }
-
-            // Check if the schedule is not in the past
-            $scheduleDateTime = Carbon::parse($jadwal->tanggal->format('Y-m-d') . ' ' . $jadwal->jam->format('H:i:s'));
-            if ($scheduleDateTime->isPast()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Cannot book for past schedules'
-                ], 400);
-            }
-
-            // Get customer (user) information
-            $pelanggan = $request->user();
-
-            // Calculate total cost
-            $hargaLayanan = $jadwal->tukangCukur->harga;
-            $ongkosKirim = $request->ongkos_kirim ?? 10000; // Default 10k
-            $totalNominal = $hargaLayanan + $ongkosKirim;
-
-            // Generate transaction ID
-            $idTransaksi = 'TRX-' . strtoupper(Str::random(8)) . '-' . time();
-
-            // Create booking
-            $pesanan = Pesanan::create([
-                'id_barber' => $request->id_barber,
-                'id_pelanggan' => $pelanggan->id,
-                'jadwal_id' => $request->jadwal_id,
-                'tgl_pesanan' => $jadwal->tanggal,
-                'nominal' => $totalNominal,
-                'id_transaksi' => $idTransaksi,
-                'alamat_lengkap' => $request->alamat_lengkap,
-                'ongkos_kirim' => $ongkosKirim,
-                'email' => $request->email,
-                'telepon' => $request->telepon,
-            ]);
-
-            // Load relationships for response
-            $pesanan->load(['barber', 'pelanggan', 'jadwal']);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Booking created successfully',
-                'booking' => [
-                    'id' => $pesanan->id,
-                    'id_transaksi' => $pesanan->id_transaksi,
-                    'barber_name' => $pesanan->barber->nama,
-                    'schedule_date' => $pesanan->jadwal->tanggal->format('Y-m-d'),
-                    'schedule_time' => $pesanan->jadwal->jam->format('H:i'),
-                    'total_amount' => $pesanan->nominal,
-                    'service_fee' => $hargaLayanan,
-                    'delivery_fee' => $ongkosKirim,
-                    'status' => 'pending',
-                    'created_at' => $pesanan->created_at
-                ]
-            ], 201);
-        } catch (\Exception $e) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error creating booking: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
         }
+
+        $pelanggan = $request->user();
+
+        // Get barber and jadwal info
+        $barber = TukangCukur::findOrFail($request->id_barber);
+        $jadwal = JadwalTukangCukur::findOrFail($request->jadwal_id);
+
+        // Check if time slot is still available
+        $existingBooking = Pesanan::where('jadwal_id', $request->jadwal_id)->first();
+        if ($existingBooking) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Time slot is no longer available'
+            ], 400);
+        }
+
+        // Create booking with pending payment status
+        $pesanan = Pesanan::create([
+            'id_barber' => $request->id_barber,
+            'id_pelanggan' => $pelanggan->id,
+            'jadwal_id' => $request->jadwal_id,
+            'tgl_pesanan' => $jadwal->tanggal,
+            'nominal' => $barber->harga,
+            'id_transaksi' => 'TRX-' . time() . '-' . rand(1000, 9999),
+            'alamat_lengkap' => $request->alamat_lengkap,
+            'ongkos_kirim' => $request->ongkos_kirim ?? 10000,
+            'email' => $request->email,
+            'telepon' => $request->telepon,
+            'status_pembayaran' => 'pending',
+        ]);
+
+        // Load relationships
+        $pesanan->load(['barber', 'jadwal', 'pelanggan']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Booking created successfully. Please complete payment.',
+            'booking' => [
+                'id' => $pesanan->id,
+                'id_transaksi' => $pesanan->id_transaksi,
+                'barber_name' => $pesanan->barber->nama,
+                'schedule_date' => $pesanan->jadwal->tanggal,
+                'schedule_time' => $pesanan->jadwal->jam,
+                'service_fee' => (float) $pesanan->nominal,
+                'delivery_fee' => (float) $pesanan->ongkos_kirim,
+                'total_amount' => (float) $pesanan->nominal + (float) $pesanan->ongkos_kirim,
+                'payment_status' => $pesanan->status_pembayaran,
+                'requires_payment' => true,
+            ]
+        ], 201);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error creating booking: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * Get customer's bookings

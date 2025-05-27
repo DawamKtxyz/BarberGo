@@ -10,8 +10,7 @@ use App\Http\Controllers\LaporanPenggajianController;
 use App\Http\Controllers\PesananController;
 use App\Http\Controllers\PendapatanController;
 use App\Http\Controllers\PenggajianController;
-
-
+use App\Models\Pesanan;
 
 // Rute Auth
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -72,3 +71,19 @@ Route::get('/', function () {
 Route::get('/laporan-penggajian/cetak', [LaporanPenggajianController::class, 'cetakPdf'])->name('laporan_penggajian.cetak');
 Route::get('pendapatan', [PendapatanController::class, 'pendapatan'])->name('pendapatan');
 
+Route::get('/payment/mock/{orderId}', function ($orderId) {
+    $pesanan = Pesanan::where('id_transaksi', $orderId)->first();
+
+    if (!$pesanan) {
+        abort(404, 'Order not found');
+    }
+
+    // Mock payment success after 3 seconds
+    $pesanan->update([
+        'status_pembayaran' => 'paid',
+        'payment_method' => 'mock_payment',
+        'paid_at' => now(),
+    ]);
+
+    return view('mock-payment', compact('pesanan'));
+});

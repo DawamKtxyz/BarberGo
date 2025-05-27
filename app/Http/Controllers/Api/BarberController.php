@@ -309,4 +309,15 @@ class BarberController extends Controller
         ], 500);
     }
 }
+    public function getUser(Request $request)
+{
+    $user = auth()->user();
+
+    return response()->json([
+        'id' => $user->id,
+        'name' => $user->name,
+        'email' => $user->email,
+        'profile_photo' => $user->profile_photo ? url('storage/' . $user->profile_photo) : null,
+    ]);
+}
 }
