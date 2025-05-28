@@ -33,7 +33,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
         // Admin routes
         Route::resource('admin', AdminController::class);
 
-        Route::resource('laporan_penggajian', LaporanPenggajianController::class);
+        // Route::resource('laporan_penggajian', LaporanPenggajianController::class);
         Route::resource('pesanan', PesananController::class);
         // Existing routes...
         Route::get('/pesanan/get-jadwal/{id}', [PesananController::class, 'getJadwal'])->name('pesanan.get-jadwal');
@@ -63,6 +63,22 @@ Route::middleware(['auth', 'admin'])->group(function () {
             Route::put('/{id}', [PenggajianController::class, 'update'])->name('update');
             Route::delete('/{id}', [PenggajianController::class, 'destroy'])->name('destroy');
         });
+
+        Route::prefix('laporan-penggajian')->name('laporan_penggajian.')->group(function () {
+        Route::get('/', [LaporanPenggajianController::class, 'index'])->name('index');
+        Route::get('/create', [LaporanPenggajianController::class, 'create'])->name('create');
+        Route::post('/', [LaporanPenggajianController::class, 'store'])->name('store');
+        Route::get('/{id}', [LaporanPenggajianController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [LaporanPenggajianController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [LaporanPenggajianController::class, 'update'])->name('update');
+        Route::delete('/{id}', [LaporanPenggajianController::class, 'destroy'])->name('destroy');
+
+        // Route untuk generate laporan bulanan
+        Route::post('/generate-bulanan', [LaporanPenggajianController::class, 'generateBulanan'])->name('generate_bulanan');
+
+        // Route untuk cetak PDF
+        Route::get('/cetak/pdf', [LaporanPenggajianController::class, 'cetakPdf'])->name('cetak_pdf');
+    });
 });
 
 // Redirect root ke login
