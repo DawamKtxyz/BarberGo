@@ -16,11 +16,13 @@ class PesananController extends Controller
         $this->middleware('admin');
     }
 
-    public function index()
-    {
-        $pesanan = Pesanan::latest()->paginate(10);
-        return view('pesanan.index', compact('pesanan'));
-    }
+public function index()
+{
+    $pesanan = Pesanan::with(['barber', 'pelanggan', 'jadwal'])
+                     ->latest()
+                     ->paginate(10);
+    return view('pesanan.index', compact('pesanan'));
+}
 
     public function create()
     {

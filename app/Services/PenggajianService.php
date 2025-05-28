@@ -4,75 +4,213 @@ namespace App\Services;
 
 use App\Models\Penggajian;
 use App\Models\Pesanan;
+use App\Models\TukangCukur;
+use App\Models\Pelanggan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class PenggajianService
 {
     /**
-     * Generate data penggajian dari pesanan
+     * Generate penggajian dari pesanan
      */
     public function generateFromPesanan($tanggalDari, $tanggalSampai, $idBarber = null)
     {
-        $query = Pesanan::with(['barber', 'pelanggan'])
-            ->whereDate('created_at', '>=', $tanggalDari)
-            ->whereDate('created_at', '<=', $tanggalSampai)
-            ->where('status', 'selesai');
+        try {
+            DB::beginTransaction();
 
-        if ($idBarber) {
-            $query->where('id_barber', $idBarber);
-        }
+            // Query pesanan yang sudah dibayar (paid) dalam rentang tanggal
+            $query = Pesanan::with(['barber', 'pelanggan', 'jadwal']) // Tambahkan relasi jadwal
+                ->whereDate('tgl_pesanan', '>=', $tanggalDari)
+                ->whereDate('tgl_pesanan', '<=', $tanggalSampai)
+                ->where('status_pembayaran', 'paid')
+                ->whereNotIn('id', function($q) {
+                    $q->select('id_pesanan')->from('penggajian');
+                });
 
-        $pesanan = $query->get();
-        $generated = 0;
+            // Filter berdasarkan barber jika dipilih
+            if ($idBarber) {
+                $query->where('id_barber', $idBarber);
+            }
 
-        foreach ($pesanan as $p) {
-            // Cek apakah sudah ada di penggajian
-            $exists = Penggajian::where('id_pesanan', $p->id)->exists();
+            $pesananList = $query->get();
 
-            if (!$exists && $p->barber && $p->pelanggan) {
-                $totalBayar = $p->nominal + ($p->ongkos_kirim ?? 0);
+            $generated = 0;
+            foreach ($pesananList as $pesanan) {
+                // Pastikan relasi ada
+                if (!$pesanan->barber || !$pesanan->pelanggan) {
+                    continue;
+                }
 
+                // Hitung total dari nominal + ongkos kirim
+                $totalAmount = $pesanan->getTotalAmount();
+
+                // Hitung potongan 5%
+                $potongan = $totalAmount * 0.05;
+                $totalGaji = $totalAmount - $potongan;
+
+                // Ambil data jadwal
+                $jadwalId = $pesanan->jadwal_id;
+                $tanggalJadwal = null;
+                $jamJadwal = null;
+
+                if ($pesanan->jadwal) {
+                    $tanggalJadwal = $pesanan->jadwal->tanggal;
+                    $jamJadwal = $pesanan->jadwal->jam;
+                }
+
+                // Buat data penggajian
                 Penggajian::create([
-                    'id_pesanan' => $p->id,
-                    'id_barber' => $p->id_barber,
-                    'nama_barber' => $p->barber->nama,
-                    'rekening_barber' => $p->barber->rekening_barber ?? '-',
-                    'id_pelanggan' => $p->id_pelanggan,
-                    'nama_pelanggan' => $p->pelanggan->nama,
-                    'tanggal_pesanan' => $p->created_at,
-                    'total_bayar' => $totalBayar,
+                    'id_pesanan' => $pesanan->id,
+                    'id_barber' => $pesanan->id_barber,
+                    'nama_barber' => $pesanan->barber->nama,
+                    'rekening_barber' => $pesanan->barber->rekening_barber ?? 'Belum diset',
+                    'id_pelanggan' => $pesanan->id_pelanggan,
+                    'nama_pelanggan' => $pesanan->pelanggan->nama,
+                    'tanggal_pesanan' => $pesanan->tgl_pesanan,
+                    'jadwal_id' => $jadwalId,
+                    'tanggal_jadwal' => $tanggalJadwal,
+                    'jam_jadwal' => $jamJadwal,
+                    'total_bayar' => $totalAmount,
+                    'potongan' => $potongan,
+                    'total_gaji' => $totalGaji,
+                    'status' => 'belum lunas'
                 ]);
+
                 $generated++;
             }
-        }
 
-        return $generated;
+            DB::commit();
+            return $generated;
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            throw $e;
+        }
     }
 
     /**
-     * Proses pembayaran gaji multiple
+     * Generate penggajian tanpa relasi (fallback method)
      */
-    public function processBayar(array $idGaji, $buktiTransfer)
+    public function generateFromPesananDirect($tanggalDari, $tanggalSampai, $idBarber = null)
     {
         try {
-            // Upload bukti transfer
-            $buktiPath = $buktiTransfer->store('bukti_transfer', 'public');
+            DB::beginTransaction();
 
-            // Update status menjadi lunas untuk semua ID yang dipilih
-            $updated = Penggajian::whereIn('id_gaji', $idGaji)
+            // Query pesanan yang sudah dibayar (paid) dalam rentang tanggal
+            $query = Pesanan::whereDate('tgl_pesanan', '>=', $tanggalDari)
+                ->whereDate('tgl_pesanan', '<=', $tanggalSampai)
+                ->where('status_pembayaran', 'paid')
+                ->whereNotIn('id', function($q) {
+                    $q->select('id_pesanan')->from('penggajian');
+                });
+
+            // Filter berdasarkan barber jika dipilih
+            if ($idBarber) {
+                $query->where('id_barber', $idBarber);
+            }
+
+            $pesananList = $query->get();
+
+            $generated = 0;
+            foreach ($pesananList as $pesanan) {
+                // Ambil data barber dan pelanggan langsung dari database
+                $barber = TukangCukur::find($pesanan->id_barber);
+                $pelanggan = Pelanggan::find($pesanan->id_pelanggan);
+
+                if (!$barber || !$pelanggan) {
+                    continue;
+                }
+
+                // Hitung total dari nominal + ongkos kirim
+                $totalAmount = $pesanan->nominal + $pesanan->ongkos_kirim;
+
+                // Hitung potongan 5%
+                $potongan = $totalAmount * 0.05;
+                $totalGaji = $totalAmount - $potongan;
+
+                // Ambil data jadwal menggunakan relasi
+                $jadwal = null;
+                if ($pesanan->jadwal_id) {
+                    $jadwal = \App\Models\JadwalTukangCukur::find($pesanan->jadwal_id);
+                }
+
+                // Buat data penggajian
+                Penggajian::create([
+                    'id_pesanan' => $pesanan->id,
+                    'id_barber' => $pesanan->id_barber,
+                    'nama_barber' => $barber->nama,
+                    'rekening_barber' => $barber->rekening_barber ?? 'Belum diset',
+                    'id_pelanggan' => $pesanan->id_pelanggan,
+                    'nama_pelanggan' => $pelanggan->nama,
+                    'tanggal_pesanan' => $pesanan->tgl_pesanan,
+                    'jadwal_id' => $pesanan->jadwal_id,
+                    'tanggal_jadwal' => $jadwal ? $jadwal->tanggal : null,
+                    'jam_jadwal' => $jadwal ? $jadwal->jam : null,
+                    'total_bayar' => $totalAmount,
+                    'potongan' => $potongan,
+                    'total_gaji' => $totalGaji,
+                    'status' => 'belum lunas'
+                ]);
+
+                $generated++;
+            }
+
+            DB::commit();
+            return $generated;
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            throw $e;
+        }
+    }
+
+    /**
+     * Proses pembayaran gaji
+     */
+    public function processBayar($idGajiArray, $buktiTransfer)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Validasi input
+            if (empty($idGajiArray) || !$buktiTransfer) {
+                return [
+                    'success' => false,
+                    'message' => 'Data tidak lengkap'
+                ];
+            }
+
+            // Upload bukti transfer
+            $fileName = time() . '_' . $buktiTransfer->getClientOriginalName();
+            $filePath = $buktiTransfer->storeAs('bukti_transfer', $fileName, 'public');
+
+            // Update status penggajian
+            $updated = Penggajian::whereIn('id_gaji', $idGajiArray)
                 ->where('status', 'belum lunas')
                 ->update([
                     'status' => 'lunas',
-                    'bukti_transfer' => $buktiPath
+                    'bukti_transfer' => $filePath,
+                    'updated_at' => now()
                 ]);
+
+            DB::commit();
 
             return [
                 'success' => true,
                 'updated' => $updated,
-                'bukti_path' => $buktiPath
+                'message' => 'Pembayaran berhasil diproses'
             ];
+
         } catch (\Exception $e) {
+            DB::rollback();
+
+            // Hapus file jika ada error
+            if (isset($filePath) && Storage::disk('public')->exists($filePath)) {
+                Storage::disk('public')->delete($filePath);
+            }
+
             return [
                 'success' => false,
                 'message' => $e->getMessage()
@@ -81,12 +219,21 @@ class PenggajianService
     }
 
     /**
-     * Hapus data penggajian beserta bukti transfer
+     * Delete penggajian
      */
-    public function deletePenggajian($id)
+    public function deletePenggajian($idGaji)
     {
         try {
-            $penggajian = Penggajian::findOrFail($id);
+            DB::beginTransaction();
+
+            $penggajian = Penggajian::find($idGaji);
+
+            if (!$penggajian) {
+                return [
+                    'success' => false,
+                    'message' => 'Data penggajian tidak ditemukan'
+                ];
+            }
 
             // Hapus bukti transfer jika ada
             if ($penggajian->bukti_transfer && Storage::disk('public')->exists($penggajian->bukti_transfer)) {
@@ -95,8 +242,16 @@ class PenggajianService
 
             $penggajian->delete();
 
-            return ['success' => true];
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => 'Data berhasil dihapus'
+            ];
+
         } catch (\Exception $e) {
+            DB::rollback();
+
             return [
                 'success' => false,
                 'message' => $e->getMessage()
@@ -111,6 +266,7 @@ class PenggajianService
     {
         $query = Penggajian::query();
 
+        // Filter tanggal - menggunakan tanggal_pesanan karena itu yang kita simpan dari tgl_pesanan
         if ($tanggalDari) {
             $query->whereDate('tanggal_pesanan', '>=', $tanggalDari);
         }
@@ -119,39 +275,44 @@ class PenggajianService
             $query->whereDate('tanggal_pesanan', '<=', $tanggalSampai);
         }
 
+        // Filter barber
         if ($idBarber) {
             $query->where('id_barber', $idBarber);
         }
 
-        $data = $query->get();
+        $data = $query->orderBy('tanggal_pesanan', 'desc')->get();
 
-        return [
+        // Hitung summary
+        $summary = [
             'total_pesanan' => $data->count(),
             'total_bayar' => $data->sum('total_bayar'),
             'total_potongan' => $data->sum('potongan'),
             'total_gaji' => $data->sum('total_gaji'),
             'lunas' => $data->where('status', 'lunas')->count(),
             'belum_lunas' => $data->where('status', 'belum lunas')->count(),
-            'detail' => $data
+        ];
+
+        return [
+            'data' => $data,
+            'summary' => $summary
         ];
     }
 
     /**
-     * Get statistik per barber
+     * Get statistik penggajian per barber
      */
     public function getStatistikPerBarber($bulan = null, $tahun = null)
     {
-        $query = Penggajian::selectRaw('
-                id_barber,
-                nama_barber,
-                COUNT(*) as total_pesanan,
-                SUM(total_bayar) as total_bayar,
-                SUM(potongan) as total_potongan,
-                SUM(total_gaji) as total_gaji,
-                SUM(CASE WHEN status = "lunas" THEN 1 ELSE 0 END) as lunas,
-                SUM(CASE WHEN status = "belum lunas" THEN 1 ELSE 0 END) as belum_lunas
-            ')
-            ->groupBy('id_barber', 'nama_barber');
+        $query = Penggajian::select(
+                'nama_barber',
+                DB::raw('COUNT(*) as total_pesanan'),
+                DB::raw('SUM(total_bayar) as total_pendapatan'),
+                DB::raw('SUM(potongan) as total_potongan'),
+                DB::raw('SUM(total_gaji) as total_gaji'),
+                DB::raw('COUNT(CASE WHEN status = "lunas" THEN 1 END) as sudah_dibayar'),
+                DB::raw('COUNT(CASE WHEN status = "belum lunas" THEN 1 END) as belum_dibayar')
+            )
+            ->groupBy('nama_barber');
 
         if ($bulan) {
             $query->whereMonth('tanggal_pesanan', $bulan);
@@ -162,5 +323,91 @@ class PenggajianService
         }
 
         return $query->get();
+    }
+
+    /**
+     * Get data untuk debugging
+     */
+    public function debugPesananData($tanggalDari, $tanggalSampai, $idBarber = null)
+    {
+        $query = Pesanan::whereDate('tgl_pesanan', '>=', $tanggalDari)
+            ->whereDate('tgl_pesanan', '<=', $tanggalSampai)
+            ->where('status_pembayaran', 'paid');
+
+        if ($idBarber) {
+            $query->where('id_barber', $idBarber);
+        }
+
+        $pesananList = $query->get();
+
+        $debug = [];
+        foreach ($pesananList as $pesanan) {
+            $barber = TukangCukur::find($pesanan->id_barber);
+            $pelanggan = Pelanggan::find($pesanan->id_pelanggan);
+
+            $totalAmount = $pesanan->nominal + $pesanan->ongkos_kirim;
+            $potongan = $totalAmount * 0.05;
+
+            $debug[] = [
+                'id_pesanan' => $pesanan->id,
+                'id_barber' => $pesanan->id_barber,
+                'id_pelanggan' => $pesanan->id_pelanggan,
+                'barber_found' => $barber ? true : false,
+                'barber_nama' => $barber ? $barber->nama : 'NOT FOUND',
+                'barber_rekening' => $barber ? ($barber->rekening_barber ?? 'Belum diset') : 'NOT FOUND',
+                'pelanggan_found' => $pelanggan ? true : false,
+                'pelanggan_nama' => $pelanggan ? $pelanggan->nama : 'NOT FOUND',
+                'nominal' => $pesanan->nominal,
+                'ongkos_kirim' => $pesanan->ongkos_kirim,
+                'total_amount' => $totalAmount,
+                'potongan_5_persen' => $potongan,
+                'total_gaji' => $totalAmount - $potongan,
+                'status_pembayaran' => $pesanan->status_pembayaran,
+                'tgl_pesanan' => $pesanan->tgl_pesanan,
+                'id_transaksi' => $pesanan->id_transaksi
+            ];
+        }
+
+        return $debug;
+    }
+
+    /**
+     * Get summary pesanan untuk periode tertentu
+     */
+    public function getSummaryPesanan($tanggalDari, $tanggalSampai, $idBarber = null)
+    {
+        $query = Pesanan::whereDate('tgl_pesanan', '>=', $tanggalDari)
+            ->whereDate('tgl_pesanan', '<=', $tanggalSampai)
+            ->where('status_pembayaran', 'paid');
+
+        if ($idBarber) {
+            $query->where('id_barber', $idBarber);
+        }
+
+        $pesananList = $query->get();
+
+        // Pesanan yang sudah ada di penggajian
+        $pesananSudahDigaji = Pesanan::whereIn('id', function($q) {
+            $q->select('id_pesanan')->from('penggajian');
+        })->whereDate('tgl_pesanan', '>=', $tanggalDari)
+          ->whereDate('tgl_pesanan', '<=', $tanggalSampai)
+          ->where('status_pembayaran', 'paid');
+
+        if ($idBarber) {
+            $pesananSudahDigaji->where('id_barber', $idBarber);
+        }
+
+        $sudahDigaji = $pesananSudahDigaji->count();
+
+        return [
+            'total_pesanan_paid' => $pesananList->count(),
+            'sudah_di_penggajian' => $sudahDigaji,
+            'belum_di_penggajian' => $pesananList->count() - $sudahDigaji,
+            'total_nominal' => $pesananList->sum('nominal'),
+            'total_ongkir' => $pesananList->sum('ongkos_kirim'),
+            'total_amount' => $pesananList->sum(function($p) {
+                return $p->nominal + $p->ongkos_kirim;
+            })
+        ];
     }
 }

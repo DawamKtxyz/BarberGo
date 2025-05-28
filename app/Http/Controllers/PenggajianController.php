@@ -60,6 +60,15 @@ class PenggajianController extends Controller
     }
 
     /**
+     * Show the form for generating penggajian
+     */
+    public function create()
+    {
+        $barbers = TukangCukur::all();
+        return view('penggajian.generate', compact('barbers'));
+    }
+
+    /**
      * Generate penggajian dari pesanan
      */
     public function generate(Request $request)
@@ -90,8 +99,9 @@ class PenggajianController extends Controller
                     ->with('info', 'Tidak ada data pesanan baru untuk di-generate atau semua pesanan sudah ada di penggajian');
             }
         } catch (\Exception $e) {
-            return redirect()->route('penggajian.index')
-                ->with('error', 'Gagal generate penggajian: ' . $e->getMessage());
+            return redirect()->route('penggajian.create')
+                ->with('error', 'Gagal generate penggajian: ' . $e->getMessage())
+                ->withInput();
         }
     }
 

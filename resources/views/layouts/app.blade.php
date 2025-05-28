@@ -35,6 +35,7 @@
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             padding: 0.8rem 1.5rem;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1030;
         }
 
         .navbar-brand {
@@ -68,6 +69,7 @@
             border: none;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
+            z-index: 1035;
         }
 
         .navbar .dropdown-item {
@@ -94,6 +96,11 @@
             transition: all var(--transition-speed);
             z-index: 1000;
             border-radius: 0 15px 15px 0;
+        }
+
+        /* Reduce sidebar z-index when modal is open */
+        body.modal-open .sidebar {
+            z-index: 1040 !important;
         }
 
         .sidebar-link {
@@ -197,6 +204,20 @@
             padding: 1.5rem;
         }
 
+        /* Modal Fixes */
+        .modal {
+            z-index: 1060 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 1055 !important;
+        }
+
+        .modal-dialog {
+            z-index: 1065 !important;
+            position: relative;
+        }
+
         /* Utilities */
         .btn-primary {
             background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
@@ -245,6 +266,10 @@
 
             .sidebar.show {
                 left: 0;
+            }
+
+            body.modal-open .sidebar {
+                z-index: 1040 !important;
             }
 
             .sidebar-backdrop {
@@ -299,6 +324,7 @@
             background: var(--primary-dark);
         }
     </style>
+    @stack('styles')
     @yield('styles')
 </head>
 <body>
@@ -437,7 +463,7 @@
                     <i class="fas fa-money-bill-wave"></i> Pendapatan
                 </a>
                 <a href="{{ route('penggajian.index') }}" class="sidebar-link {{ request()->routeIs('penggajian*') ? 'active' : '' }}">
-                      <i class="fas fa-money-bill-wave"></i> Penggajian
+                      <i class="fas fa-hand-holding-usd"></i> Penggajian
                 </a>
                 <a href="{{ route('laporan_penggajian.index') }}" class="sidebar-link {{ request()->routeIs('laporan_penggajian*') ? 'active' : '' }}">
                     <i class="fas fa-chart-bar"></i> Laporan Penggajian
@@ -456,6 +482,35 @@
                 <div class="content-header">
                     <h1 class="content-title">@yield('header')</h1>
                     <p class="content-subtitle">@yield('subheader')</p>
+                </div>
+                @endif
+
+                <!-- Alert Messages -->
+                @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                @endif
+
+                @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                @endif
+
+                @if(session('warning'))
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>{{ session('warning') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                @endif
+
+                @if(session('info'))
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>{{ session('info') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
                 @endif
 
@@ -494,8 +549,37 @@
                 card.style.animationDelay = index * 0.1 + 's';
                 card.classList.add('fade-in-up');
             });
+
+            // Auto-hide alerts after 5 seconds
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                setTimeout(() => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+
+        // Fix modal z-index issues
+        document.addEventListener('show.bs.modal', function(event) {
+            document.body.classList.add('modal-open');
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) {
+                sidebar.style.zIndex = '1040';
+            }
+        });
+
+        document.addEventListener('hidden.bs.modal', function(event) {
+            if (!document.querySelector('.modal.show')) {
+                document.body.classList.remove('modal-open');
+                const sidebar = document.querySelector('.sidebar');
+                if (sidebar) {
+                    sidebar.style.zIndex = '1000';
+                }
+            }
         });
     </script>
+    @stack('scripts')
     @yield('scripts')
 </body>
 </html>

@@ -53,14 +53,16 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/pembayaran/unfinish', 'App\Http\Controllers\PembayaranController@unfinish')->name('pembayaran.unfinish');
         Route::get('/pembayaran/error', 'App\Http\Controllers\PembayaranController@error')->name('pembayaran.error');
 
+         // Updated Penggajian routes
         Route::prefix('penggajian')->name('penggajian.')->group(function () {
             Route::get('/', [PenggajianController::class, 'index'])->name('index');
+            Route::get('/create', [PenggajianController::class, 'create'])->name('create'); // New route for generate form
             Route::post('/generate', [PenggajianController::class, 'generate'])->name('generate');
             Route::post('/bayar', [PenggajianController::class, 'bayar'])->name('bayar');
             Route::get('/{id}/edit', [PenggajianController::class, 'edit'])->name('edit');
             Route::put('/{id}', [PenggajianController::class, 'update'])->name('update');
             Route::delete('/{id}', [PenggajianController::class, 'destroy'])->name('destroy');
-});
+        });
 });
 
 // Redirect root ke login

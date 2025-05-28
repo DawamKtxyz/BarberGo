@@ -20,6 +20,9 @@ class Penggajian extends Model
         'id_pelanggan',
         'nama_pelanggan',
         'tanggal_pesanan',
+        'jadwal_id',        // TAMBAHAN
+        'tanggal_jadwal',   // TAMBAHAN
+        'jam_jadwal',       // TAMBAHAN
         'total_bayar',
         'potongan',
         'total_gaji',
@@ -58,5 +61,28 @@ class Penggajian extends Model
         $this->attributes['total_bayar'] = $value;
         $this->attributes['potongan'] = $value * 0.05; // 5%
         $this->attributes['total_gaji'] = $value - ($value * 0.05);
+    }
+
+        public function jadwal()
+    {
+        return $this->belongsTo(JadwalTukangCukur::class, 'jadwal_id');
+    }
+
+    // Accessor untuk format jam jadwal
+    public function getJamJadwalFormatAttribute()
+    {
+        if ($this->jam_jadwal) {
+            return date('H:i', strtotime($this->jam_jadwal));
+        }
+        return '-';
+    }
+
+    // Accessor untuk format tanggal jadwal
+    public function getTanggalJadwalFormatAttribute()
+    {
+        if ($this->tanggal_jadwal) {
+            return date('d/m/Y', strtotime($this->tanggal_jadwal));
+        }
+        return '-';
     }
 }

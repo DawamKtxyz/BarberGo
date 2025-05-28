@@ -21,7 +21,7 @@
                             <th>Email</th>
                             <th>No. Telepon</th>
                             <th>Alamat</th>
-                            <th>Tanggal Jadwal</th>
+                            <th>Tanggal & Jam</th>
                             <th>Harga</th>
                             <th>Ongkir</th>
                             <th>Total</th>
@@ -38,7 +38,14 @@
                                 <td>{{ $l->email ?? '-' }}</td>
                                 <td>{{ $l->telepon ?? '-' }}</td>
                                 <td>{{ $l->alamat_lengkap ?? '-' }}</td>
-                                <td>{{ $l->tgl_pesanan }}</td>
+                                <td>
+                                    @if($l->jadwal)
+                                        <div>{{ $l->tanggal_jadwal_format }}</div>
+                                        <small class="text-muted">{{ $l->jam_jadwal_format }}</small>
+                                    @else
+                                        {{ $l->tgl_pesanan }}
+                                    @endif
+                                </td>
                                 <td>Rp {{ number_format($l->nominal, 0, ',', '.') }}</td>
                                 <td>Rp {{ number_format($l->ongkos_kirim ?? 10000, 0, ',', '.') }}</td>
                                 <td>Rp {{ number_format(($l->nominal + ($l->ongkos_kirim ?? 10000)), 0, ',', '.') }}</td>
