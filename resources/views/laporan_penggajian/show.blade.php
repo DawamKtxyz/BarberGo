@@ -42,9 +42,9 @@
                                 <td><strong>Status:</strong></td>
                                 <td>
                                     @if($laporan->status == 'Dibayar')
-                                        <span class="badge bg-success">{{ $laporan->status }}</span>
+                                        <span class="badge bg-danger">{{ $laporan->status_gaji }}</span>
                                     @else
-                                        <span class="badge bg-danger">{{ $laporan->status }}</span>
+                                        <span class="badge bg-success">{{ $laporan->status_gaji }}</span>
                                     @endif
                                 </td>
                             </tr>
