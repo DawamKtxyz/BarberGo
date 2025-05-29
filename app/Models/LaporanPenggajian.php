@@ -13,6 +13,9 @@ class LaporanPenggajian extends Model
     protected $primaryKey = 'id_gaji';
     public $incrementing = true;
 
+    // Tambahkan appends untuk memastikan accessor status_gaji selalu ada
+    protected $appends = ['status_gaji'];
+
     protected $fillable = [
         'id_barber',
         'nama_barber',
@@ -22,8 +25,8 @@ class LaporanPenggajian extends Model
         'potongan_komisi',
         'total_gaji',
         'periode_dari',
-        'periode_sampai',
-        'status'
+        'periode_sampai'
+        // Removed 'status' field as it will be taken from penggajian table
     ];
 
     protected $casts = [
@@ -69,5 +72,39 @@ class LaporanPenggajian extends Model
     {
         $persentase = $this->getPersentaseKomisiAttribute();
         return "{$persentase}% ({$this->jumlah_pesanan} pesanan × 5%)";
+    }
+
+    // Method untuk mendapatkan status dari tabel penggajian
+    public function getStatusGajiAttribute()
+    {
+        // Ambil status dari tabel penggajian berdasarkan periode dan barber
+        $statusPenggajian = Penggajian::whereHas('pesanan', function($query) {
+            $query->where('id_barber', $this->id_barber)
+                  ->whereBetween('tgl_pesanan', [$this->periode_dari, $this->periode_sampai]);
+        })->pluck('status')->unique();
+
+        // Jika ada status "Lunas" maka dianggap "Sudah Digaji"
+        if ($statusPenggajian->contains('lunas')) {
+            return 'Sudah Digaji';
+        }
+
+        // Default "Belum Digaji"
+        return 'Belum Digaji';
+    }
+
+    // Scope untuk filter berdasarkan status
+    public function scopeFilterByStatus($query, $status)
+    {
+        if ($status == 'Sudah Digaji') {
+            return $query->whereHas('detailLaporan.pesanan.penggajian', function($q) {
+                $q->where('status', 'lunas');
+            });
+        } elseif ($status == 'Belum Digaji') {
+            return $query->whereHas('detailLaporan.pesanan.penggajian', function($q) {
+                $q->where('status', 'belum lunas');
+            })->orWhereDoesntHave('detailLaporan.pesanan.penggajian');
+        }
+
+        return $query;
     }
 }

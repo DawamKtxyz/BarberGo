@@ -45,8 +45,8 @@
                 <label for="status" class="form-label">Status</label>
                 <select id="status" class="form-control" name="status">
                     <option value="">-- Semua Status --</option>
-                    <option value="Belum Dibayar" {{ request('status') == 'Belum Dibayar' ? 'selected' : '' }}>Belum Dibayar</option>
-                    <option value="Dibayar" {{ request('status') == 'Dibayar' ? 'selected' : '' }}>Dibayar</option>
+                    <option value="Sudah Digaji" {{ request('status') == 'Sudah Digaji' ? 'selected' : '' }}>Sudah Digaji</option>
+                    <option value="Belum Digaji" {{ request('status') == 'Belum Digaji' ? 'selected' : '' }}>Belum Digaji</option>
                 </select>
             </div>
             <div class="col-md-3 d-flex align-items-end">
@@ -182,11 +182,13 @@
                                 <strong class="text-success">Rp {{ number_format($laporan->total_gaji, 0, ',', '.') }}</strong>
                             </td>
                             <td>
-                                @if($laporan->status == 'Dibayar')
-                                    <span class="badge bg-success">{{ $laporan->status }}</span>
+                                @if($laporan->status_gaji == 'Sudah Digaji')
+                                    <span class="badge bg-success">{{ $laporan->status_gaji }}</span>
                                 @else
-                                    <span class="badge bg-danger">{{ $laporan->status }}</span>
+                                    <span class="badge bg-danger">{{ $laporan->status_gaji }}</span>
                                 @endif
+                                <br>
+                                <small class="text-muted">Status dari tabel penggajian</small>
                             </td>
                             <td>
                                 <div class="btn-group" role="group">

@@ -7,6 +7,7 @@ use App\Models\DetailLaporanPenggajian;
 use App\Models\TukangCukur;
 use App\Models\Pesanan;
 use App\Models\Pelanggan;
+use App\Models\Penggajian;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -40,9 +41,27 @@ class LaporanPenggajianController extends Controller
             }
         }
 
-        // Filter berdasarkan status
+        // Filter berdasarkan status dari tabel penggajian
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            if ($request->status == 'Sudah Digaji') {
+                // Join dengan tabel penggajian untuk filter status Lunas
+                $query->whereHas('detailLaporan', function($q) {
+                    $q->whereHas('pesanan', function($q2) {
+                        $q2->whereHas('penggajian', function($q3) {
+                            $q3->where('status', 'lunas');
+                        });
+                    });
+                });
+            } elseif ($request->status == 'Belum Digaji') {
+                // Join dengan tabel penggajian untuk filter status Belum Lunas
+                $query->whereHas('detailLaporan', function($q) {
+                    $q->whereHas('pesanan', function($q2) {
+                        $q2->whereHas('penggajian', function($q3) {
+                            $q3->where('status', 'belum lunas');
+                        });
+                    });
+                });
+            }
         }
 
         $laporanPenggajian = $query->paginate(10);
@@ -51,17 +70,33 @@ class LaporanPenggajianController extends Controller
         $allData = $query->get();
 
         $totalKeseluruhan = [
-        'total_pendapatan' => $allData->sum('total_pendapatan'),
-        'total_komisi' => $allData->sum('potongan_komisi'),
-        'total_gaji' => $allData->sum('total_gaji'),
+            'total_pendapatan' => $allData->sum('total_pendapatan'),
+            'total_komisi' => $allData->sum('potongan_komisi'),
+            'total_gaji' => $allData->sum('total_gaji'),
         ];
-
 
         // Data untuk filter
         $barbers = TukangCukur::all();
 
         // Append query parameters to pagination links
         $laporanPenggajian->appends($request->query());
+
+        // Tambahkan status dari tabel penggajian untuk setiap laporan
+        foreach ($laporanPenggajian as $laporan) {
+            // Ambil status dari penggajian berdasarkan pesanan dalam periode ini
+            $statusPenggajian = Penggajian::whereHas('pesanan', function($q) use ($laporan) {
+                $q->where('id_barber', $laporan->id_barber)
+                  ->whereBetween('tgl_pesanan', [$laporan->periode_dari, $laporan->periode_sampai]);
+            })->pluck('status')->unique();
+
+            // Tentukan status laporan berdasarkan status penggajian
+            // Menggunakan setAttribute untuk set attribute dinamis
+            if ($statusPenggajian->contains('lunas')) {
+                $laporan->setAttribute('status_gaji', 'Sudah Digaji');
+            } else {
+                $laporan->setAttribute('status_gaji', 'Belum Digaji');
+            }
+        }
 
         return view('laporan_penggajian.index', compact('laporanPenggajian', 'totalKeseluruhan', 'barbers'));
     }
@@ -139,7 +174,7 @@ class LaporanPenggajianController extends Controller
             // Total gaji = Total pendapatan - Komisi
             $totalGaji = $totalPendapatan - $potonganKomisi;
 
-            // Buat laporan penggajian
+            // Buat laporan penggajian (tanpa field status karena akan diambil dari tabel penggajian)
             $laporan = LaporanPenggajian::create([
                 'id_barber' => $request->id_barber,
                 'nama_barber' => $barber->nama,
@@ -149,8 +184,7 @@ class LaporanPenggajianController extends Controller
                 'potongan_komisi' => $potonganKomisi,
                 'total_gaji' => $totalGaji,
                 'periode_dari' => $request->periode_dari,
-                'periode_sampai' => $request->periode_sampai,
-                'status' => 'Belum Dibayar'
+                'periode_sampai' => $request->periode_sampai
             ]);
 
             // Buat detail laporan untuk setiap pesanan
@@ -188,6 +222,19 @@ class LaporanPenggajianController extends Controller
             $laporan = LaporanPenggajian::with(['barber', 'detailLaporan.pelanggan'])
                 ->findOrFail($id);
 
+            // Ambil status dari tabel penggajian untuk laporan ini
+            $statusPenggajian = Penggajian::whereHas('pesanan', function($q) use ($laporan) {
+                $q->where('id_barber', $laporan->id_barber)
+                  ->whereBetween('tgl_pesanan', [$laporan->periode_dari, $laporan->periode_sampai]);
+            })->pluck('status')->unique();
+
+            // Tentukan status laporan
+            if ($statusPenggajian->contains('lunas')) {
+                $laporan->setAttribute('status_gaji', 'Sudah Digaji');
+            } else {
+                $laporan->setAttribute('status_gaji', 'Belum Digaji');
+            }
+
             return view('laporan_penggajian.show', compact('laporan'));
         } catch (\Exception $e) {
             return redirect()->route('laporan_penggajian.index')
@@ -210,8 +257,8 @@ class LaporanPenggajianController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Update ini sekarang hanya untuk mengubah potongan tambahan
         $request->validate([
-            'status' => 'required|in:Belum Dibayar,Dibayar',
             'potongan_tambahan' => 'nullable|numeric|min:0'
         ]);
 
@@ -223,9 +270,16 @@ class LaporanPenggajianController extends Controller
             $totalGaji = $laporan->total_pendapatan - $laporan->potongan_komisi - $potonganTambahan;
 
             $laporan->update([
-                'status' => $request->status,
                 'total_gaji' => $totalGaji
             ]);
+
+            // Jika ingin update status penggajian, harus update di tabel penggajian
+            if ($request->has('update_status_penggajian')) {
+                Penggajian::whereHas('pesanan', function($q) use ($laporan) {
+                    $q->where('id_barber', $laporan->id_barber)
+                      ->whereBetween('tgl_pesanan', [$laporan->periode_dari, $laporan->periode_sampai]);
+                })->update(['status' => $request->status_penggajian]);
+            }
 
             return redirect()->route('laporan_penggajian.index')
                 ->with('success', 'Laporan penggajian berhasil diperbarui');
@@ -282,6 +336,20 @@ class LaporanPenggajianController extends Controller
         }
 
         $laporanPenggajian = $query->get();
+
+        // Tambahkan status dari tabel penggajian untuk setiap laporan
+        foreach ($laporanPenggajian as $laporan) {
+            $statusPenggajian = Penggajian::whereHas('pesanan', function($q) use ($laporan) {
+                $q->where('id_barber', $laporan->id_barber)
+                  ->whereBetween('tgl_pesanan', [$laporan->periode_dari, $laporan->periode_sampai]);
+            })->pluck('status')->unique();
+
+            if ($statusPenggajian->contains('lunas')) {
+                $laporan->setAttribute('status_gaji', 'Sudah Digaji');
+            } else {
+                $laporan->setAttribute('status_gaji', 'Belum Digaji');
+            }
+        }
 
         $totalKeseluruhan = [
             'total_pendapatan' => $laporanPenggajian->sum('total_pendapatan'),
@@ -360,7 +428,7 @@ class LaporanPenggajianController extends Controller
                 // Total gaji = Total pendapatan - Komisi
                 $totalGaji = $totalPendapatan - $potonganKomisi;
 
-                // Buat laporan
+                // Buat laporan (tanpa field status)
                 $laporan = LaporanPenggajian::create([
                     'id_barber' => $barber->id,
                     'nama_barber' => $barber->nama,
@@ -370,8 +438,7 @@ class LaporanPenggajianController extends Controller
                     'potongan_komisi' => $potonganKomisi,
                     'total_gaji' => $totalGaji,
                     'periode_dari' => $periodeAwal->format('Y-m-d'),
-                    'periode_sampai' => $periodeAkhir->format('Y-m-d'),
-                    'status' => 'Belum Dibayar'
+                    'periode_sampai' => $periodeAkhir->format('Y-m-d')
                 ]);
 
                 // Buat detail laporan

@@ -20,7 +20,6 @@ class CreateLaporanPenggajianTable extends Migration
             $table->decimal('total_gaji', 15, 2)->default(0);
             $table->date('periode_dari');
             $table->date('periode_sampai');
-            $table->enum('status', ['Belum Dibayar', 'Dibayar'])->default('Belum Dibayar');
             $table->timestamps();
 
             $table->foreign('id_barber')->references('id')->on('tukang_cukur')->onDelete('cascade');
