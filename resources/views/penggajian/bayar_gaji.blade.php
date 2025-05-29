@@ -26,6 +26,11 @@
                     <form action="{{ route('penggajian.bayar') }}" method="POST" enctype="multipart/form-data" id="bayarForm">
                         @csrf
 
+                        {{-- Hidden inputs untuk ID gaji - PERBAIKAN UTAMA --}}
+                        @foreach($selectedGaji as $gaji)
+                            <input type="hidden" name="id_gaji[]" value="{{ $gaji->id_gaji }}">
+                        @endforeach
+
                         {{-- Data yang akan dibayar --}}
                         <div class="alert alert-info">
                             <h6><strong>Data Gaji yang akan dibayar:</strong></h6>
@@ -47,7 +52,6 @@
                                             <tr>
                                                 <td>
                                                     <span class="badge bg-info">#{{ $gaji->id_pesanan }}</span>
-                                                    <input type="hidden" name="id_gaji[]" value="{{ $gaji->id_gaji }}">
                                                 </td>
                                                 <td>{{ $gaji->nama_barber }}</td>
                                                 <td>{{ $gaji->nama_pelanggan }}</td>
@@ -122,6 +126,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitIcon = document.getElementById('submitIcon');
     const submitText = document.getElementById('submitText');
 
+    // Debug: Check if hidden inputs exist
+    const hiddenInputs = document.querySelectorAll('input[name="id_gaji[]"]');
+    console.log('Hidden inputs found:', hiddenInputs.length);
+    hiddenInputs.forEach((input, index) => {
+        console.log(`ID Gaji ${index + 1}:`, input.value);
+    });
+
     // File validation
     if (fileInput) {
         fileInput.addEventListener('change', function() {
@@ -147,6 +158,28 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form submission handling
     if (bayarForm) {
         bayarForm.addEventListener('submit', function(e) {
+            // Debug: Check form data before submit
+            const formData = new FormData(this);
+            console.log('Form data before submit:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key, value);
+            }
+
+            // Validate required fields
+            const idGajiInputs = document.querySelectorAll('input[name="id_gaji[]"]');
+            if (idGajiInputs.length === 0) {
+                e.preventDefault();
+                alert('Error: Tidak ada data gaji yang dipilih!');
+                return;
+            }
+
+            const buktiTransfer = document.querySelector('input[name="bukti_transfer"]');
+            if (!buktiTransfer.files.length) {
+                e.preventDefault();
+                alert('Error: Bukti transfer harus diupload!');
+                return;
+            }
+
             // Show loading state
             submitBtn.disabled = true;
             loadingSpinner.style.display = 'inline-block';

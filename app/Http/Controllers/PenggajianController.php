@@ -90,32 +90,75 @@ class PenggajianController extends Controller
         }
     }
 
-    public function bayar(Request $request)
-    {
-        // dd(request()->all());
-            $request->validate([
-            'id_gaji' => 'required|array',
-            'bukti_transfer' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
+ public function bayar(Request $request)
+{
+    // Debug untuk melihat data yang diterima
+    Log::info('Bayar Gaji Request Data:', $request->all());
 
-        try {
-            // Simpan file
-            $path = $request->file('bukti_transfer')->store('assets/images', 'public');
+    // Validasi dengan pesan error yang lebih jelas
+    $request->validate([
+        'id_gaji' => 'required|array|min:1',
+        'id_gaji.*' => 'required|exists:penggajian,id_gaji',
+        'bukti_transfer' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+    ], [
+        'id_gaji.required' => 'Data gaji yang akan dibayar harus dipilih',
+        'id_gaji.array' => 'Format data gaji tidak valid',
+        'id_gaji.min' => 'Minimal pilih satu data gaji',
+        'id_gaji.*.required' => 'ID gaji tidak boleh kosong',
+        'id_gaji.*.exists' => 'Data gaji tidak ditemukan',
+        'bukti_transfer.required' => 'Bukti transfer harus diupload',
+        'bukti_transfer.image' => 'File harus berupa gambar',
+        'bukti_transfer.mimes' => 'Format file harus JPG, JPEG, atau PNG',
+        'bukti_transfer.max' => 'Ukuran file maksimal 2MB',
+    ]);
 
-            // Simpan ke database
-            foreach ($request->id_gaji as $id) {
-                $gaji = Penggajian::findOrFail($id);
+    try {
+        DB::beginTransaction();
+
+        // Cek apakah semua data gaji masih dalam status 'belum lunas'
+        $gajiData = Penggajian::whereIn('id_gaji', $request->id_gaji)
+                              ->where('status', '!=', 'lunas')
+                              ->get();
+
+        if ($gajiData->count() !== count($request->id_gaji)) {
+            DB::rollBack();
+            return redirect()->route('penggajian.index')
+                ->with('error', 'Beberapa data gaji sudah lunas atau tidak ditemukan');
+        }
+
+        // Simpan file bukti transfer
+        $path = $request->file('bukti_transfer')->store('bukti_transfer', 'public');
+
+        // Update status semua gaji yang dipilih
+        $updatedCount = 0;
+        foreach ($request->id_gaji as $id) {
+            $gaji = Penggajian::find($id);
+            if ($gaji && $gaji->status !== 'lunas') {
                 $gaji->status = 'lunas';
                 $gaji->bukti_transfer = $path;
                 $gaji->save();
+                $updatedCount++;
             }
-
-            return redirect()->route('penggajian.index')->with('success', 'Pembayaran berhasil dilakukan!');
-        } catch (\Exception $e) {
-            Log::error('Error during payment processing: ' . $e->getMessage());
-            return redirect()->route('penggajian.index')->with('error', 'Pembayaran gagal: ' . $e->getMessage());
         }
+
+        DB::commit();
+
+        Log::info("Pembayaran gaji berhasil untuk {$updatedCount} data");
+
+        return redirect()->route('penggajian.index')
+            ->with('success', "Pembayaran berhasil dilakukan untuk {$updatedCount} data gaji!");
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error during payment processing: ' . $e->getMessage(), [
+            'request_data' => $request->all(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return redirect()->route('penggajian.index')
+            ->with('error', 'Pembayaran gagal: ' . $e->getMessage());
     }
+}
 
 
     public function edit($id)
@@ -194,26 +237,50 @@ class PenggajianController extends Controller
         ]);
     }
 
-    public function showBayarForm(Request $request)
-    {
-        $ids = explode(',', $request->get('ids', ''));
+public function showBayarForm(Request $request)
+{
+    $ids = explode(',', $request->get('ids', ''));
 
-        if (empty($ids) || $ids[0] === '') {
-            return redirect()->route('penggajian.index')
-                ->with('error', 'Tidak ada data gaji yang dipilih.');
-        }
+    // Debug log
+    Log::info('Show Bayar Form - IDs received:', $ids);
 
-        // Cukup pakai Eloquent, ini sudah cukup
-        $selectedGaji = Penggajian::whereIn('id_gaji', $ids)
-            ->where('status', '!=', 'lunas')
-            ->get();
-
-        if ($selectedGaji->isEmpty()) {
-            return redirect()->route('penggajian.index')
-                ->with('error', 'Data gaji tidak ditemukan atau sudah lunas.');
-        }
-
-        return view('penggajian.bayar_gaji', compact('selectedGaji'));
+    if (empty($ids) || $ids[0] === '' || $ids[0] === null) {
+        return redirect()->route('penggajian.index')
+            ->with('error', 'Tidak ada data gaji yang dipilih.');
     }
+
+    // Filter ID yang valid (numerik)
+    $validIds = array_filter($ids, function($id) {
+        return is_numeric($id) && $id > 0;
+    });
+
+    if (empty($validIds)) {
+        return redirect()->route('penggajian.index')
+            ->with('error', 'ID gaji tidak valid.');
+    }
+
+    // Ambil data gaji yang belum lunas
+    $selectedGaji = Penggajian::whereIn('id_gaji', $validIds)
+        ->where('status', '!=', 'lunas')
+        ->get();
+
+    Log::info('Selected Gaji Count:', ['count' => $selectedGaji->count()]);
+
+    if ($selectedGaji->isEmpty()) {
+        return redirect()->route('penggajian.index')
+            ->with('error', 'Data gaji tidak ditemukan atau sudah lunas.');
+    }
+
+    // Debug: Log data yang akan ditampilkan
+    foreach ($selectedGaji as $gaji) {
+        Log::info('Gaji Data:', [
+            'id_gaji' => $gaji->id_gaji,
+            'nama_barber' => $gaji->nama_barber,
+            'status' => $gaji->status
+        ]);
+    }
+
+    return view('penggajian.bayar_gaji', compact('selectedGaji'));
+}
 
 }
