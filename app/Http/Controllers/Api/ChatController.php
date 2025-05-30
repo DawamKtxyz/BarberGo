@@ -65,91 +65,94 @@ class ChatController extends Controller
      * Get or create direct chat between barber and pelanggan
      */
     public function getOrCreateDirectChat(Request $request)
-    {
-        try {
-            $validator = Validator::make($request->all(), [
-                'barber_id' => 'required|exists:tukang_cukur,id',
-            ]);
+{
+    try {
+        $user = $request->user();
+        $userType = $this->getUserType($user);
 
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors(),
-                ], 422);
-            }
+        // Validasi input berdasarkan userType
+        $rules = $userType === 'barber'
+            ? ['pelanggan_id' => 'required|exists:pelanggan,id']
+            : ['barber_id' => 'required|exists:tukang_cukur,id'];
 
-            $user = $request->user();
-            $userType = $this->getUserType($user);
-            $barberId = $request->barber_id;
+        $validator = Validator::make($request->all(), $rules);
 
-            if ($userType === 'barber') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Barbers cannot initiate chat with other barbers',
-                ], 400);
-            }
-
-            $pelangganId = $user->id;
-
-            // Get or create direct chat
-            $chat = Chat::firstOrCreate(
-                [
-                    'barber_id' => $barberId,
-                    'pelanggan_id' => $pelangganId,
-                    'booking_id' => null, // NULL untuk direct chat
-                ],
-                [
-                    'barber_unread_count' => 0,
-                    'pelanggan_unread_count' => 0,
-                ]
-            );
-
-            // Get messages
-            $messages = $chat->messages()->orderBy('created_at', 'asc')->get();
-
-            $formattedMessages = $messages->map(function ($message) {
-                return [
-                    'id' => $message->id,
-                    'message' => $message->message,
-                    'message_type' => $message->message_type,
-                    'file_path' => $message->file_path,
-                    'sender_type' => $message->sender_type,
-                    'sender_id' => $message->sender_id,
-                    'is_read' => $message->is_read,
-                    'created_at' => $message->created_at,
-                ];
-            });
-
-            // Get barber info
-            $barber = TukangCukur::find($barberId);
-
-            // Mark messages as read
-            $this->markMessagesAsRead($chat, $userType, $user->id);
-
-            return response()->json([
-                'success' => true,
-                'chat' => [
-                    'id' => $chat->id,
-                    'barber_id' => $chat->barber_id,
-                    'pelanggan_id' => $chat->pelanggan_id,
-                    'barber_info' => [
-                        'id' => $barber->id,
-                        'nama' => $barber->nama,
-                        'spesialisasi' => $barber->spesialisasi,
-                        'profile_photo' => $barber->profile_photo,
-                    ],
-                    'messages' => $formattedMessages,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Error getting/creating direct chat: ' . $e->getMessage());
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error getting chat: ' . $e->getMessage(),
-            ], 500);
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
         }
+
+        // Tetapkan ID berdasarkan userType
+        if ($userType === 'barber') {
+            $barberId = $user->id;
+            $pelangganId = $request->pelanggan_id;
+        } else {
+            $barberId = $request->barber_id;
+            $pelangganId = $user->id;
+        }
+
+        // Ambil atau buat chat langsung
+        $chat = Chat::firstOrCreate(
+            [
+                'barber_id' => $barberId,
+                'pelanggan_id' => $pelangganId,
+                'booking_id' => null, // NULL untuk direct chat
+            ],
+            [
+                'barber_unread_count' => 0,
+                'pelanggan_unread_count' => 0,
+            ]
+        );
+
+        // Ambil pesan
+        $messages = $chat->messages()->orderBy('created_at', 'asc')->get();
+
+        $formattedMessages = $messages->map(function ($message) {
+            return [
+                'id' => $message->id,
+                'message' => $message->message,
+                'message_type' => $message->message_type,
+                'file_path' => $message->file_path,
+                'sender_type' => $message->sender_type,
+                'sender_id' => $message->sender_id,
+                'is_read' => $message->is_read,
+                'created_at' => $message->created_at,
+            ];
+        });
+
+        // Ambil info lawan bicara
+        $barber = TukangCukur::find($barberId);
+
+        // Tandai pesan sebagai dibaca
+        $this->markMessagesAsRead($chat, $userType, $user->id);
+
+        return response()->json([
+            'success' => true,
+            'chat' => [
+                'id' => $chat->id,
+                'barber_id' => $chat->barber_id,
+                'pelanggan_id' => $chat->pelanggan_id,
+                'barber_info' => [
+                    'id' => $barber->id,
+                    'nama' => $barber->nama,
+                    'spesialisasi' => $barber->spesialisasi,
+                    'profile_photo' => $barber->profile_photo,
+                ],
+                'messages' => $formattedMessages,
+            ],
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Error getting/creating direct chat: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Error getting chat: ' . $e->getMessage(),
+        ], 500);
     }
+}
+
 
     /**
      * Get chat by chat ID
@@ -264,6 +267,8 @@ class ChatController extends Controller
                 'message_type' => $request->message_type ?? 'text',
                 'is_read' => false,
             ]);
+
+            event(new \App\Events\MessageSent($message));
 
             // Update chat
             $otherUserUnreadField = $userType === 'barber' ? 'pelanggan_unread_count' : 'barber_unread_count';

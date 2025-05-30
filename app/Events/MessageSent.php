@@ -1,42 +1,41 @@
 <?php
-// File: app/Events/MessageSent.php
 namespace App\Events;
 
+use App\Models\Message;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
-use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 class MessageSent implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use InteractsWithSockets, SerializesModels;
 
     public $message;
-    public $barberId;
-    public $pelangganId;
+    public $chatId;
 
-    public function __construct($message, $barberId, $pelangganId)
+    public function __construct(Message $message)
     {
         $this->message = $message;
-        $this->barberId = $barberId;
-        $this->pelangganId = $pelangganId;
+        $this->chatId = $message->chat_id;
     }
 
-    public function broadcastOn()
+    public function broadcastOn(): Channel
     {
-        return [
-            new PrivateChannel('chat.barber.' . $this->barberId),
-            new PrivateChannel('chat.pelanggan.' . $this->pelangganId),
-        ];
+        return new Channel('chat.' . $this->chatId);
     }
 
     public function broadcastWith()
     {
         return [
-            'message' => $this->message,
+            'id' => $this->message->id,
+            'chat_id' => $this->chatId,
+            'message' => $this->message->message,
+            'message_type' => $this->message->message_type,
+            'sender_type' => $this->message->sender_type,
+            'sender_id' => $this->message->sender_id,
+            'created_at' => $this->message->created_at,
         ];
     }
 }
+
