@@ -11,18 +11,7 @@ use App\Http\Controllers\API\PelangganController;
 use App\Http\Controllers\API\TestController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PaymentController;
-
-
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
+use App\Http\Controllers\Api\PenggajianController;
 
 // Test routes for debugging
 Route::get('/test', [TestController::class, 'index']);
@@ -63,6 +52,11 @@ Route::prefix('barber')->middleware('api')->group(function () {
 
         // Statistics
         Route::get('/stats/{barberId}', [BarberController::class, 'getStats']);
+
+        // TAMBAHKAN ROUTE PENGGAJIAN DI SINI:
+        Route::get('/penggajian', [PenggajianController::class, 'getPenggajianBarber']);
+        Route::get('/penggajian/stats', [PenggajianController::class, 'getStatsPenggajian']);
+        Route::get('/penggajian/{id}', [PenggajianController::class, 'showPenggajian']);
     });
 });
 
