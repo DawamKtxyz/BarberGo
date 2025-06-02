@@ -33,11 +33,11 @@
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="card text-white bg-info mb-3">
-                            <div class="card-header">Sistem</div>
+                        <div class="card text-white bg-warning mb-3">
+                            <div class="card-header">Data Pesanan</div>
                             <div class="card-body">
-                                <h5 class="card-title">Versi Laravel</h5>
-                                <p class="card-text">{{ app()->version() }}</p>
+                                <h5 class="card-title">Total Data Pesanan</h5>
+                                <p class="card-text display-4">{{ App\Models\Pesanan::count() }}</p>
                             </div>
                         </div>
                     </div>

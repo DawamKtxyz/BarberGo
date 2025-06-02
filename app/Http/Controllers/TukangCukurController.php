@@ -66,8 +66,10 @@ class TukangCukurController extends Controller
 
         // Upload sertifikat
         if ($request->hasFile('sertifikat')) {
-            $path = $request->file('sertifikat')->store('sertifikat', 'public');
-            $data['sertifikat'] = $path;
+            $file = $request->file('sertifikat');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('sertifikat', $filename, 'public');
+            $data['sertifikat'] = 'storage/sertifikat/' . $filename;
         }
 
         $tukangCukur = TukangCukur::create($data);
@@ -156,12 +158,20 @@ class TukangCukurController extends Controller
         // Upload sertifikat baru (jika ada)
         if ($request->hasFile('sertifikat')) {
             // Hapus sertifikat lama jika ada
-            if ($tukangCukur->sertifikat && Storage::disk('public')->exists($tukangCukur->sertifikat)) {
-                Storage::disk('public')->delete($tukangCukur->sertifikat);
+            if ($tukangCukur->sertifikat) {
+                // Ekstrak path file dari database (hapus 'storage/' dari awal path)
+                $oldFilePath = str_replace('storage/', '', $tukangCukur->sertifikat);
+
+                if (Storage::disk('public')->exists($oldFilePath)) {
+                    Storage::disk('public')->delete($oldFilePath);
+                }
             }
 
-            $path = $request->file('sertifikat')->store('sertifikat', 'public');
-            $data['sertifikat'] = $path;
+            // Upload file baru dengan nama custom
+            $file = $request->file('sertifikat');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('sertifikat', $filename, 'public');
+            $data['sertifikat'] = 'storage/sertifikat/' . $filename;
         }
 
         $tukangCukur->update($data);

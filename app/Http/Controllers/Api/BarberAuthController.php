@@ -70,6 +70,7 @@ class BarberAuthController extends Controller
                 'is_verified' => $barber->is_verified,
                 'verified_at' => $barber->verified_at,
                 'persentase_komisi' => $barber->persentase_komisi,
+                'nama_bank' => $barber->nama_bank,
                 'rekening_barber' => $barber->rekening_barber,
                 'profile_photo' => $barber->profile_photo,
             ]
@@ -85,6 +86,8 @@ class BarberAuthController extends Controller
             'telepon' => 'required|string|max:15',
             'spesialisasi' => 'nullable|string',
             'harga' => 'nullable|numeric|min:0',
+            'nama_bank' => 'required|string|max:100',
+            'rekening_barber' => 'required|string|max:50',
             'sertifikat' => 'required|file|mimes:pdf|max:2048',
         ]);
 
@@ -117,6 +120,8 @@ class BarberAuthController extends Controller
             'telepon' => $request->telepon,
             'spesialisasi' => $request->spesialisasi,
             'harga' => $harga,
+            'nama_bank' => $request->nama_bank,
+            'rekening_barber' => $request->rekening_barber,
             'sertifikat' => 'storage/sertifikat/' . $fileName,
             'persentase_komisi' => 0.05,
             'is_verified' => false, // Default not verified
@@ -133,6 +138,8 @@ class BarberAuthController extends Controller
                 'telepon' => $barber->telepon,
                 'spesialisasi' => $barber->spesialisasi,
                 'harga' => $barber->harga,
+                'nama_bank' => $barber->nama_bank,
+                'rekening_barber' => $barber->rekening_barber,
                 'sertifikat' => $barber->sertifikat,
                 'is_verified' => $barber->is_verified,
             ]
@@ -199,6 +206,7 @@ class BarberAuthController extends Controller
                 'is_verified' => $barber->is_verified,
                 'verified_at' => $barber->verified_at,
                 'persentase_komisi' => $barber->persentase_komisi,
+                'nama_bank' => $barber->nama_bank,
                 'rekening_barber' => $barber->rekening_barber,
                 'profile_photo' => $barber->profile_photo,
             ]
@@ -214,7 +222,8 @@ class BarberAuthController extends Controller
             'telepon' => 'sometimes|string|max:15',
             'spesialisasi' => 'sometimes|nullable|string',
             'harga' => 'sometimes|numeric|min:0',
-            'rekening_barber' => 'sometimes|nullable|string',
+            'nama_bank' => 'sometimes|string|max:100',
+            'rekening_barber' => 'sometimes|string|max:50',
         ]);
 
         if ($validator->fails()) {
@@ -226,7 +235,7 @@ class BarberAuthController extends Controller
         }
 
         $barber->update($request->only([
-            'nama', 'telepon', 'spesialisasi', 'harga', 'rekening_barber'
+            'nama', 'telepon', 'spesialisasi', 'harga', 'nama_bank', 'rekening_barber'
         ]));
 
         return response()->json([
@@ -243,9 +252,10 @@ class BarberAuthController extends Controller
                 'is_verified' => $barber->is_verified,
                 'verified_at' => $barber->verified_at,
                 'persentase_komisi' => $barber->persentase_komisi,
+                'nama_bank' => $barber->nama_bank,
                 'rekening_barber' => $barber->rekening_barber,
                 'profile_photo' => $barber->profile_photo,
             ]
         ]);
     }
-}
+}   

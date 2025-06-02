@@ -469,10 +469,10 @@
                     <i class="fas fa-chart-bar"></i> Laporan Penggajian
                 </a>
 
-                <div class="sidebar-heading">Pengaturan</div>
-                <a href="#" class="sidebar-link {{ request()->routeIs('pengaturan*') ? 'active' : '' }}">
+                <div class="sidebar-heading"></div>
+                {{-- <a href="#" class="sidebar-link {{ request()->routeIs('pengaturan*') ? 'active' : '' }}">
                     <i class="fas fa-cog"></i> Pengaturan Sistem
-                </a>
+                </a> --}}
             </div>
 
             <!-- Main Content -->
