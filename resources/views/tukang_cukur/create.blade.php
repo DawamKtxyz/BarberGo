@@ -65,6 +65,31 @@
                 <small class="text-muted">Masukkan harga jasa potong rambut yang ditawarkan</small>
             </div>
 
+            <!-- Input dropdown untuk nama bank -->
+            <div class="mb-3">
+                <label for="nama_bank" class="form-label">Nama Bank</label>
+                <select class="form-select @error('nama_bank') is-invalid @enderror" id="nama_bank" name="nama_bank">
+                    <option value="">-- Pilih Bank --</option>
+                    <option value="BCA" {{ old('nama_bank') == 'BCA' ? 'selected' : '' }}>BCA</option>
+                    <option value="BRI" {{ old('nama_bank') == 'BRI' ? 'selected' : '' }}>BRI</option>
+                    <option value="BNI" {{ old('nama_bank') == 'BNI' ? 'selected' : '' }}>BNI</option>
+                    <option value="Mandiri" {{ old('nama_bank') == 'Mandiri' ? 'selected' : '' }}>Mandiri</option>
+                    <option value="CIMB Niaga" {{ old('nama_bank') == 'CIMB Niaga' ? 'selected' : '' }}>CIMB Niaga</option>
+                    <option value="BTN" {{ old('nama_bank') == 'BTN' ? 'selected' : '' }}>BTN</option>
+                    <option value="Danamon" {{ old('nama_bank') == 'Danamon' ? 'selected' : '' }}>Danamon</option>
+                    <option value="Permata" {{ old('nama_bank') == 'Permata' ? 'selected' : '' }}>Permata</option>
+                    <option value="Maybank" {{ old('nama_bank') == 'Maybank' ? 'selected' : '' }}>Maybank</option>
+                    <option value="OCBC NISP" {{ old('nama_bank') == 'OCBC NISP' ? 'selected' : '' }}>OCBC NISP</option>
+                    <option value="BSI (Bank Syariah Indonesia)" {{ old('nama_bank') == 'BSI (Bank Syariah Indonesia)' ? 'selected' : '' }}>BSI (Bank Syariah Indonesia)</option>
+                    <option value="Jenius" {{ old('nama_bank') == 'Jenius' ? 'selected' : '' }}>Jenius</option>
+                    <option value="Digibank" {{ old('nama_bank') == 'Digibank' ? 'selected' : '' }}>Digibank</option>
+                </select>
+                @error('nama_bank')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <small class="text-muted">Pilih nama bank untuk rekening barber</small>
+            </div>
+
             <!-- Input baru untuk rekening barber -->
             <div class="mb-3">
                 <label for="rekening_barber" class="form-label">Nomor Rekening Barber</label>

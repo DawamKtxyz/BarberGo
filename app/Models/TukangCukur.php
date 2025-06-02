@@ -25,6 +25,7 @@ class TukangCukur extends Authenticatable
         'profile_photo',
         'api_token',
         'persentase_komisi',
+        'nama_bank',
         'rekening_barber', // Kolom baru untuk nomor rekening barber
         'is_verified',
         'verified_at'

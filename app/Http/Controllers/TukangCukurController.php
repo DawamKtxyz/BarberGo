@@ -51,6 +51,7 @@ class TukangCukurController extends Controller
             'telepon' => 'required|string|max:15',
             'spesialisasi' => 'nullable|string',
             'harga' => 'required|numeric|min:0',
+            'nama_bank' => 'required|string|max:50',
             'rekening_barber' => 'nullable|string|max:50',
             'password' => 'required|string|min:6|confirmed',
             'jadwal' => 'nullable|array',
