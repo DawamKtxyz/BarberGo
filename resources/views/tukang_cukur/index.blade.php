@@ -26,11 +26,13 @@
                         <th>Nama</th>
                         <th>Email</th>
                         <th>Telepon</th>
+                        <th>Alamat</th>
                         <th>Spesialisasi</th>
                         <th>Tarif</th>
+                        <th>Bank</th>
                         <th>Status</th>
                         <th>Sertifikat</th>
-                        <th width="200">Aksi</th>
+                        <th width="250">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -40,13 +42,27 @@
                             <td>{{ $barber->nama }}</td>
                             <td>{{ $barber->email }}</td>
                             <td>{{ $barber->telepon }}</td>
-                            <td>{{ $barber->spesialisasi ?: '-' }}</td>
+                            <td>{{ Str::limit($barber->alamat ?: '-', 50) }}</td>
+                            <td>{{ Str::limit($barber->spesialisasi ?: '-', 30) }}</td>
                             <td>Rp {{ number_format($barber->harga, 0, ',', '.') }}</td>
+                            <td>
+                                @if($barber->nama_bank)
+                                    {{ $barber->nama_bank }}
+                                    @if($barber->rekening_barber)
+                                        <br><small class="text-muted">{{ $barber->rekening_barber }}</small>
+                                    @endif
+                                @else
+                                    -
+                                @endif
+                            </td>
                             <td>
                                 @if($barber->is_verified)
                                     <span class="badge bg-success">
                                         <i class="fas fa-check-circle"></i> Terverifikasi
                                     </span>
+                                    @if($barber->verified_at)
+                                        <br><small class="text-muted">{{ $barber->verified_at->format('d/m/Y') }}</small>
+                                    @endif
                                 @else
                                     <span class="badge bg-warning text-dark">
                                         <i class="fas fa-clock"></i> Menunggu Verifikasi
@@ -63,45 +79,49 @@
                                 @endif
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{{ route('tukang_cukur.show', $barber->id) }}" class="btn btn-info btn-sm" title="Detail">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{{ route('tukang_cukur.edit', $barber->id) }}" class="btn btn-primary btn-sm" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
+                                <div class="btn-group-vertical" role="group">
+                                    <div class="btn-group mb-1" role="group">
+                                        <a href="{{ route('tukang_cukur.show', $barber->id) }}" class="btn btn-info btn-sm" title="Detail">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ route('tukang_cukur.edit', $barber->id) }}" class="btn btn-primary btn-sm" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
 
-                                    @if($barber->is_verified)
-                                        <form action="{{ route('tukang_cukur.unverify', $barber->id) }}" method="POST" class="d-inline">
+                                    <div class="btn-group" role="group">
+                                        @if($barber->is_verified)
+                                            <form action="{{ route('tukang_cukur.unverify', $barber->id) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                @method('PUT')
+                                                <button type="submit" class="btn btn-warning btn-sm" title="Batalkan Verifikasi" onclick="return confirm('Apakah Anda yakin ingin membatalkan verifikasi?')">
+                                                    <i class="fas fa-times-circle"></i>
+                                                </button>
+                                            </form>
+                                        @else
+                                            <form action="{{ route('tukang_cukur.verify', $barber->id) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                @method('PUT')
+                                                <button type="submit" class="btn btn-success btn-sm" title="Verifikasi" onclick="return confirm('Apakah Anda yakin ingin memverifikasi tukang cukur ini?')">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+
+                                        <form action="{{ route('tukang_cukur.destroy', $barber->id) }}" method="POST" class="d-inline">
                                             @csrf
-                                            @method('PUT')
-                                            <button type="submit" class="btn btn-warning btn-sm" title="Batalkan Verifikasi" onclick="return confirm('Apakah Anda yakin ingin membatalkan verifikasi?')">
-                                                <i class="fas fa-times-circle"></i>
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger btn-sm" title="Hapus" onclick="return confirm('Apakah Anda yakin ingin menghapus data ini?')">
+                                                <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
-                                    @else
-                                        <form action="{{ route('tukang_cukur.verify', $barber->id) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('PUT')
-                                            <button type="submit" class="btn btn-success btn-sm" title="Verifikasi" onclick="return confirm('Apakah Anda yakin ingin memverifikasi tukang cukur ini?')">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                        </form>
-                                    @endif
-
-                                    <form action="{{ route('tukang_cukur.destroy', $barber->id) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger btn-sm" title="Hapus" onclick="return confirm('Apakah Anda yakin ingin menghapus data ini?')">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center">Belum ada data tukang cukur.</td>
+                            <td colspan="11" class="text-center">Belum ada data tukang cukur.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -120,6 +140,12 @@
     }
     .btn-group .btn:last-child {
         margin-right: 0;
+    }
+    .btn-group-vertical .btn-group {
+        width: 100%;
+    }
+    .btn-group-vertical .btn-group .btn {
+        margin-right: 2px;
     }
 </style>
 @endsection

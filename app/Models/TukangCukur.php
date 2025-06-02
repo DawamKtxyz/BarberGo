@@ -19,6 +19,7 @@ class TukangCukur extends Authenticatable
         'email',
         'password',
         'telepon',
+        'alamat', // Tambahan kolom alamat
         'spesialisasi',
         'harga', // Perubahan dari persentase_komisi menjadi harga
         'sertifikat',

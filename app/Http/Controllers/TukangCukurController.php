@@ -49,6 +49,7 @@ class TukangCukurController extends Controller
             'nama' => 'required|string|max:255',
             'email' => 'required|email|unique:tukang_cukur',
             'telepon' => 'required|string|max:15',
+            'alamat' => 'nullable|string|max:500', // Validasi untuk alamat
             'spesialisasi' => 'nullable|string',
             'harga' => 'required|numeric|min:0',
             'nama_bank' => 'required|string|max:50',
@@ -139,8 +140,10 @@ class TukangCukurController extends Controller
             'nama' => 'required|string|max:255',
             'email' => 'required|email|unique:tukang_cukur,email,' . $tukangCukur->id,
             'telepon' => 'required|string|max:15',
+            'alamat' => 'nullable|string|max:500', // Validasi untuk alamat
             'spesialisasi' => 'nullable|string',
             'harga' => 'required|numeric|min:0',
+            'nama_bank' => 'required|string|max:50',
             'rekening_barber' => 'nullable|string|max:50',
             'password' => 'nullable|string|min:6|confirmed',
             'jadwal' => 'nullable|array',

@@ -32,6 +32,10 @@
                         <td>{{ $tukangCukur->telepon }}</td>
                     </tr>
                     <tr>
+                        <th>Alamat:</th>
+                        <td>{{ $tukangCukur->alamat ?: '-' }}</td>
+                    </tr>
+                    <tr>
                         <th>Spesialisasi:</th>
                         <td>{{ $tukangCukur->spesialisasi ?: '-' }}</td>
                     </tr>
@@ -39,16 +43,20 @@
                         <th>Tarif:</th>
                         <td>Rp {{ number_format($tukangCukur->harga, 0, ',', '.') }}</td>
                     </tr>
-                    <tr>
-                        <th>Rekening:</th>
-                        <td>{{ $tukangCukur->rekening_barber ?: '-' }}</td>
-                    </tr>
                 </table>
             </div>
             <div class="col-md-6">
                 <table class="table table-borderless">
                     <tr>
-                        <th width="200">Status:</th>
+                        <th width="200">Nama Bank:</th>
+                        <td>{{ $tukangCukur->nama_bank ?: '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Nomor Rekening:</th>
+                        <td>{{ $tukangCukur->rekening_barber ?: '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Status:</th>
                         <td>
                             @if($tukangCukur->is_verified)
                                 <span class="badge bg-success">
@@ -71,7 +79,7 @@
                         <th>Sertifikat:</th>
                         <td>
                             @if($tukangCukur->sertifikat)
-                                <a href="{{ Storage::url($tukangCukur->sertifikat) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ asset($tukangCukur->sertifikat) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-file"></i> Lihat Sertifikat
                                 </a>
                             @else
@@ -100,6 +108,7 @@
                     <thead class="table-light">
                         <tr>
                             <th>Tanggal</th>
+                            <th>Hari</th>
                             <th>Jam</th>
                         </tr>
                     </thead>
@@ -112,9 +121,10 @@
                         @foreach($groupedJadwal as $tanggal => $jadwalPerTanggal)
                             <tr>
                                 <td>{{ \Carbon\Carbon::parse($tanggal)->format('d/m/Y') }}</td>
+                                <td>{{ \Carbon\Carbon::parse($tanggal)->locale('id')->dayName }}</td>
                                 <td>
-                                    @foreach($jadwalPerTanggal as $j)
-                                        <span class="badge bg-primary">{{ $j->jam }}</span>
+                                    @foreach($jadwalPerTanggal->sortBy('jam') as $j)
+                                        <span class="badge bg-primary me-1">{{ $j->jam->format('H:i') }}</span>
                                     @endforeach
                                 </td>
                             </tr>
@@ -123,7 +133,9 @@
                 </table>
             </div>
         @else
-            <p class="text-muted">Belum ada jadwal yang ditentukan.</p>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Belum ada jadwal yang ditentukan.
+            </div>
         @endif
 
         <div class="mt-4">
@@ -144,6 +156,14 @@
                     </button>
                 </form>
             @endif
+
+            <form action="{{ route('tukang_cukur.destroy', $tukangCukur->id) }}" method="POST" class="d-inline ms-2">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Apakah Anda yakin ingin menghapus data tukang cukur ini? Data yang sudah dihapus tidak dapat dikembalikan.')">
+                    <i class="fas fa-trash"></i> Hapus Data
+                </button>
+            </form>
         </div>
     </div>
 </div>

@@ -47,6 +47,16 @@
                 @enderror
             </div>
 
+            <!-- Field Alamat Baru -->
+            <div class="mb-3">
+                <label for="alamat" class="form-label">Alamat</label>
+                <textarea class="form-control @error('alamat') is-invalid @enderror" id="alamat" name="alamat" rows="3" placeholder="Masukkan alamat lengkap">{{ old('alamat') }}</textarea>
+                @error('alamat')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <small class="text-muted">Alamat domisili</small>
+            </div>
+
             <div class="mb-3">
                 <label for="spesialisasi" class="form-label">Spesialisasi</label>
                 <textarea class="form-control @error('spesialisasi') is-invalid @enderror" id="spesialisasi" name="spesialisasi" rows="3">{{ old('spesialisasi') }}</textarea>
@@ -67,8 +77,8 @@
 
             <!-- Input dropdown untuk nama bank -->
             <div class="mb-3">
-                <label for="nama_bank" class="form-label">Nama Bank</label>
-                <select class="form-select @error('nama_bank') is-invalid @enderror" id="nama_bank" name="nama_bank">
+                <label for="nama_bank" class="form-label">Nama Bank <span class="text-danger">*</span></label>
+                <select class="form-select @error('nama_bank') is-invalid @enderror" id="nama_bank" name="nama_bank" required>
                     <option value="">-- Pilih Bank --</option>
                     <option value="BCA" {{ old('nama_bank') == 'BCA' ? 'selected' : '' }}>BCA</option>
                     <option value="BRI" {{ old('nama_bank') == 'BRI' ? 'selected' : '' }}>BRI</option>

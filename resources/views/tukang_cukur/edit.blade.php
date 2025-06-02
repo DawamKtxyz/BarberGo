@@ -24,6 +24,7 @@
         <form action="{{ route('tukang_cukur.update', $tukangCukur->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
+
             <div class="mb-3">
                 <label for="nama" class="form-label">Nama <span class="text-danger">*</span></label>
                 <input type="text" class="form-control @error('nama') is-invalid @enderror" id="nama" name="nama" value="{{ old('nama', $tukangCukur->nama) }}" required>
@@ -48,6 +49,15 @@
                 @enderror
             </div>
 
+            <!-- Field alamat yang hilang dari controller -->
+            <div class="mb-3">
+                <label for="alamat" class="form-label">Alamat</label>
+                <textarea class="form-control @error('alamat') is-invalid @enderror" id="alamat" name="alamat" rows="3">{{ old('alamat', $tukangCukur->alamat) }}</textarea>
+                @error('alamat')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+            </div>
+
             <div class="mb-3">
                 <label for="spesialisasi" class="form-label">Spesialisasi</label>
                 <textarea class="form-control @error('spesialisasi') is-invalid @enderror" id="spesialisasi" name="spesialisasi" rows="3">{{ old('spesialisasi', $tukangCukur->spesialisasi) }}</textarea>
@@ -63,6 +73,39 @@
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
                 <small class="text-muted">Masukkan harga jasa potong rambut yang ditawarkan</small>
+            </div>
+
+            <!-- Input dropdown untuk nama bank -->
+                        <div class="mb-3">
+                            <label for="nama_bank" class="form-label">Nama Bank <span class="text-danger">*</span></label>
+                            <select class="form-select @error('nama_bank') is-invalid @enderror" id="nama_bank" name="nama_bank" required>
+                                <option value="">-- Pilih Bank --</option>
+                                <option value="BCA" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'BCA' ? 'selected' : '' }}>BCA</option>
+                                <option value="BRI" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'BRI' ? 'selected' : '' }}>BRI</option>
+                                <option value="BNI" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'BNI' ? 'selected' : '' }}>BNI</option>
+                                <option value="Mandiri" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'Mandiri' ? 'selected' : '' }}>Mandiri</option>
+                                <option value="CIMB Niaga" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'CIMB Niaga' ? 'selected' : '' }}>CIMB Niaga</option>
+                                <option value="BTN" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'BTN' ? 'selected' : '' }}>BTN</option>
+                                <option value="Danamon" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'Danamon' ? 'selected' : '' }}>Danamon</option>
+                                <option value="Permata" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'Permata' ? 'selected' : '' }}>Permata</option>
+                                <option value="Maybank" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'Maybank' ? 'selected' : '' }}>Maybank</option>
+                                <option value="OCBC NISP" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'OCBC NISP' ? 'selected' : '' }}>OCBC NISP</option>
+                                <option value="BSI (Bank Syariah Indonesia)" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'BSI (Bank Syariah Indonesia)' ? 'selected' : '' }}>BSI (Bank Syariah Indonesia)</option>
+                                <option value="Jenius" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'Jenius' ? 'selected' : '' }}>Jenius</option>
+                                <option value="Digibank" {{ old('nama_bank', $tukangCukur->nama_bank ?? '') == 'Digibank' ? 'selected' : '' }}>Digibank</option>
+                            </select>
+                            @error('nama_bank')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted">Pilih nama bank untuk rekening barber</small>
+                        </div>
+
+            <div class="mb-3">
+                <label for="rekening_barber" class="form-label">Nomor Rekening</label>
+                <input type="text" class="form-control @error('rekening_barber') is-invalid @enderror" id="rekening_barber" name="rekening_barber" value="{{ old('rekening_barber', $tukangCukur->rekening_barber) }}">
+                @error('rekening_barber')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="mb-3">
@@ -126,7 +169,7 @@
 
             <div class="mb-3">
                 <label for="sertifikat" class="form-label">Upload Sertifikat <small class="text-muted">(Kosongkan jika tidak ingin mengubah)</small></label>
-                <input type="file" class="form-control @error('sertifikat') is-invalid @enderror" id="sertifikat" name="sertifikat">
+                <input type="file" class="form-control @error('sertifikat') is-invalid @enderror" id="sertifikat" name="sertifikat" accept=".pdf,.jpg,.jpeg,.png">
                 @if($tukangCukur->sertifikat)
                 <div class="mt-2">
                     <small class="text-muted">Sertifikat saat ini: <a href="{{ asset($tukangCukur->sertifikat) }}" target="_blank">Lihat Sertifikat</a></small>
