@@ -30,6 +30,8 @@ Route::options('/{any}', function() {
 Route::prefix('barber')->middleware('api')->group(function () {
     Route::post('/login', [BarberAuthController::class, 'login']);
     Route::post('/register', [BarberAuthController::class, 'register']);
+    Route::post('/check-verification', [BarberAuthController::class, 'checkVerificationStatus']);
+
 
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {

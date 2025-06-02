@@ -28,11 +28,29 @@ class BarberAuthController extends Controller
 
         $barber = TukangCukur::where('email', $request->email)->first();
 
-        if (!$barber || !Hash::check($request->password, $barber->password)) {
+        if (!$barber) {
             return response()->json([
                 'success' => false,
                 'message' => 'Email atau password salah'
             ], 401);
+        }
+
+        // Check if password is correct
+        if (!Hash::check($request->password, $barber->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email atau password salah'
+            ], 401);
+        }
+
+        // Check if barber is verified
+        if (!$barber->is_verified) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun Anda belum diverifikasi. Silakan tunggu konfirmasi dari admin.',
+                'is_verified' => false,
+                'email' => $barber->email
+            ], 403);
         }
 
         $token = $barber->createToken('barber-token')->plainTextToken;
@@ -49,6 +67,11 @@ class BarberAuthController extends Controller
                 'spesialisasi' => $barber->spesialisasi,
                 'sertifikat' => $barber->sertifikat,
                 'harga' => $barber->harga,
+                'is_verified' => $barber->is_verified,
+                'verified_at' => $barber->verified_at,
+                'persentase_komisi' => $barber->persentase_komisi,
+                'rekening_barber' => $barber->rekening_barber,
+                'profile_photo' => $barber->profile_photo,
             ]
         ]);
     }
@@ -61,7 +84,7 @@ class BarberAuthController extends Controller
             'password' => ['required', 'string', Password::min(6)],
             'telepon' => 'required|string|max:15',
             'spesialisasi' => 'nullable|string',
-            'harga' => 'nullable|numeric|min:0', // Tambahkan validasi untuk harga
+            'harga' => 'nullable|numeric|min:0',
             'sertifikat' => 'required|file|mimes:pdf|max:2048',
         ]);
 
@@ -74,18 +97,18 @@ class BarberAuthController extends Controller
         }
 
         // Upload file sertifikat
-if ($request->hasFile('sertifikat')) {
-    $file = $request->file('sertifikat');
-    $fileName = time() . '_' . $file->getClientOriginalName();
-    $filePath = $file->storeAs('public/sertifikat', $fileName);
-} else {
-    return response()->json([
-        'success' => false,
-        'message' => 'Sertifikat harus diupload'
-    ], 422);
-}
+        if ($request->hasFile('sertifikat')) {
+            $file = $request->file('sertifikat');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('public/sertifikat', $fileName);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sertifikat harus diupload'
+            ], 422);
+        }
 
- $harga = $request->has('harga') ? $request->harga : 20000;
+        $harga = $request->has('harga') ? $request->harga : 20000;
 
         $barber = TukangCukur::create([
             'nama' => $request->nama,
@@ -93,14 +116,16 @@ if ($request->hasFile('sertifikat')) {
             'password' => Hash::make($request->password),
             'telepon' => $request->telepon,
             'spesialisasi' => $request->spesialisasi,
-            'harga' => $harga, // default harga awal misalnya
+            'harga' => $harga,
             'sertifikat' => 'storage/sertifikat/' . $fileName,
-            'persentase_komisi' => 0.05, // default komisi
+            'persentase_komisi' => 0.05,
+            'is_verified' => false, // Default not verified
+            'verified_at' => null,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Registrasi berhasil',
+            'message' => 'Registrasi berhasil. Silakan tunggu verifikasi dari admin sebelum dapat login.',
             'barber' => [
                 'id' => $barber->id,
                 'nama' => $barber->nama,
@@ -109,6 +134,7 @@ if ($request->hasFile('sertifikat')) {
                 'spesialisasi' => $barber->spesialisasi,
                 'harga' => $barber->harga,
                 'sertifikat' => $barber->sertifikat,
+                'is_verified' => $barber->is_verified,
             ]
         ], 201);
     }
@@ -120,6 +146,106 @@ if ($request->hasFile('sertifikat')) {
         return response()->json([
             'success' => true,
             'message' => 'Logout berhasil'
+        ]);
+    }
+
+    public function checkVerificationStatus(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email tidak valid',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $barber = TukangCukur::where('email', $request->email)->first();
+
+        if (!$barber) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Barber tidak ditemukan'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'is_verified' => $barber->is_verified,
+            'verified_at' => $barber->verified_at,
+            'message' => $barber->is_verified
+                ? 'Akun sudah diverifikasi'
+                : 'Akun belum diverifikasi. Silakan tunggu konfirmasi dari admin.'
+        ]);
+    }
+
+    public function getProfile(Request $request)
+    {
+        $barber = $request->user();
+
+        return response()->json([
+            'success' => true,
+            'barber' => [
+                'id' => $barber->id,
+                'nama' => $barber->nama,
+                'email' => $barber->email,
+                'telepon' => $barber->telepon,
+                'spesialisasi' => $barber->spesialisasi,
+                'sertifikat' => $barber->sertifikat,
+                'harga' => $barber->harga,
+                'is_verified' => $barber->is_verified,
+                'verified_at' => $barber->verified_at,
+                'persentase_komisi' => $barber->persentase_komisi,
+                'rekening_barber' => $barber->rekening_barber,
+                'profile_photo' => $barber->profile_photo,
+            ]
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $barber = $request->user();
+
+        $validator = Validator::make($request->all(), [
+            'nama' => 'sometimes|string|max:255',
+            'telepon' => 'sometimes|string|max:15',
+            'spesialisasi' => 'sometimes|nullable|string',
+            'harga' => 'sometimes|numeric|min:0',
+            'rekening_barber' => 'sometimes|nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $barber->update($request->only([
+            'nama', 'telepon', 'spesialisasi', 'harga', 'rekening_barber'
+        ]));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profil berhasil diperbarui',
+            'barber' => [
+                'id' => $barber->id,
+                'nama' => $barber->nama,
+                'email' => $barber->email,
+                'telepon' => $barber->telepon,
+                'spesialisasi' => $barber->spesialisasi,
+                'sertifikat' => $barber->sertifikat,
+                'harga' => $barber->harga,
+                'is_verified' => $barber->is_verified,
+                'verified_at' => $barber->verified_at,
+                'persentase_komisi' => $barber->persentase_komisi,
+                'rekening_barber' => $barber->rekening_barber,
+                'profile_photo' => $barber->profile_photo,
+            ]
         ]);
     }
 }
