@@ -6,6 +6,7 @@ use App\Models\TukangCukur;
 use App\Models\JadwalTukangCukur;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class TukangCukurController extends Controller
 {
@@ -49,8 +50,8 @@ class TukangCukurController extends Controller
             'email' => 'required|email|unique:tukang_cukur',
             'telepon' => 'required|string|max:15',
             'spesialisasi' => 'nullable|string',
-            'harga' => 'required|numeric|min:0', // Perubahan dari persentase_komisi
-            'rekening_barber' => 'nullable|string|max:50', // Validasi untuk rekening barber
+            'harga' => 'required|numeric|min:0',
+            'rekening_barber' => 'nullable|string|max:50',
             'password' => 'required|string|min:6|confirmed',
             'jadwal' => 'nullable|array',
             'jadwal.*.tanggal' => 'nullable|date',
@@ -61,11 +62,12 @@ class TukangCukurController extends Controller
 
         $data = $request->except(['jadwal', 'password_confirmation']);
         $data['password'] = bcrypt($request->password);
+        $data['is_verified'] = false; // Set default belum terverifikasi
 
         // Upload sertifikat
         if ($request->hasFile('sertifikat')) {
-            $path = $request->file('sertifikat')->store('public/sertifikat');
-            $data['sertifikat'] = str_replace('public/', 'storage/', $path);
+            $path = $request->file('sertifikat')->store('sertifikat', 'public');
+            $data['sertifikat'] = $path;
         }
 
         $tukangCukur = TukangCukur::create($data);
@@ -73,7 +75,6 @@ class TukangCukurController extends Controller
         // Simpan jadwal (hanya jika jadwal disediakan)
         if ($request->has('jadwal') && is_array($request->jadwal)) {
             foreach ($request->jadwal as $jadwal) {
-                // Periksa apakah tanggal dan jam ada dan tidak kosong
                 if (isset($jadwal['tanggal']) && !empty($jadwal['tanggal']) &&
                     isset($jadwal['jam']) && is_array($jadwal['jam']) && !empty($jadwal['jam'])) {
 
@@ -136,8 +137,8 @@ class TukangCukurController extends Controller
             'email' => 'required|email|unique:tukang_cukur,email,' . $tukangCukur->id,
             'telepon' => 'required|string|max:15',
             'spesialisasi' => 'nullable|string',
-            'harga' => 'required|numeric|min:0', // Perubahan dari persentase_komisi
-            'rekening_barber' => 'nullable|string|max:50', // Validasi untuk rekening barber
+            'harga' => 'required|numeric|min:0',
+            'rekening_barber' => 'nullable|string|max:50',
             'password' => 'nullable|string|min:6|confirmed',
             'jadwal' => 'nullable|array',
             'jadwal.*.tanggal' => 'nullable|date',
@@ -154,8 +155,13 @@ class TukangCukurController extends Controller
 
         // Upload sertifikat baru (jika ada)
         if ($request->hasFile('sertifikat')) {
-            $path = $request->file('sertifikat')->store('public/sertifikat');
-            $data['sertifikat'] = str_replace('public/', 'storage/', $path);
+            // Hapus sertifikat lama jika ada
+            if ($tukangCukur->sertifikat && Storage::disk('public')->exists($tukangCukur->sertifikat)) {
+                Storage::disk('public')->delete($tukangCukur->sertifikat);
+            }
+
+            $path = $request->file('sertifikat')->store('sertifikat', 'public');
+            $data['sertifikat'] = $path;
         }
 
         $tukangCukur->update($data);
@@ -166,7 +172,6 @@ class TukangCukurController extends Controller
         // Simpan jadwal baru (hanya jika jadwal disediakan)
         if ($request->has('jadwal') && is_array($request->jadwal)) {
             foreach ($request->jadwal as $jadwal) {
-                // Periksa apakah tanggal dan jam ada dan tidak kosong
                 if (isset($jadwal['tanggal']) && !empty($jadwal['tanggal']) &&
                     isset($jadwal['jam']) && is_array($jadwal['jam']) && !empty($jadwal['jam'])) {
 
@@ -189,10 +194,33 @@ class TukangCukurController extends Controller
 
     public function destroy(TukangCukur $tukangCukur)
     {
+        // Hapus file sertifikat jika ada
+        if ($tukangCukur->sertifikat && Storage::disk('public')->exists($tukangCukur->sertifikat)) {
+            Storage::disk('public')->delete($tukangCukur->sertifikat);
+        }
+
         // Jadwal akan terhapus secara otomatis karena kita menggunakan ON DELETE CASCADE
         $tukangCukur->delete();
 
         return redirect()->route('tukang_cukur.index')
             ->with('success', 'Data tukang cukur berhasil dihapus.');
+    }
+
+    // Method untuk verifikasi tukang cukur
+    public function verify(TukangCukur $tukangCukur)
+    {
+        $tukangCukur->verify();
+
+        return redirect()->route('tukang_cukur.index')
+            ->with('success', 'Tukang cukur berhasil diverifikasi.');
+    }
+
+    // Method untuk membatalkan verifikasi
+    public function unverify(TukangCukur $tukangCukur)
+    {
+        $tukangCukur->unverify();
+
+        return redirect()->route('tukang_cukur.index')
+            ->with('success', 'Verifikasi tukang cukur berhasil dibatalkan.');
     }
 }

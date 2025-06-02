@@ -30,6 +30,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
         // Tukang Cukur routes
         Route::resource('tukang_cukur', TukangCukurController::class);
 
+        // Routes untuk verifikasi tukang cukur
+        Route::put('tukang_cukur/{tukangCukur}/verify', [TukangCukurController::class, 'verify'])->name('tukang_cukur.verify');
+        Route::put('tukang_cukur/{tukangCukur}/unverify', [TukangCukurController::class, 'unverify'])->name('tukang_cukur.unverify');
+
         // Admin routes
         Route::resource('admin', AdminController::class);
 
@@ -54,15 +58,15 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/pembayaran/error', 'App\Http\Controllers\PembayaranController@error')->name('pembayaran.error');
 
          // Updated Penggajian routes
-Route::prefix('penggajian')->name('penggajian.')->group(function () {
-            Route::get('/', [PenggajianController::class, 'index'])->name('index');
-            Route::get('/create', [PenggajianController::class, 'create'])->name('create');
-            Route::post('/generate', [PenggajianController::class, 'generate'])->name('generate');
-            Route::get('/bayar', [PenggajianController::class, 'showBayarForm'])->name('bayar.form');
-            Route::post('/bayar', [PenggajianController::class, 'bayar'])->name('bayar');
-            Route::get('/{id}/edit', [PenggajianController::class, 'edit'])->name('edit');
-            Route::put('/{id}', [PenggajianController::class, 'update'])->name('update');
-            Route::delete('/{id}', [PenggajianController::class, 'destroy'])->name('destroy');
+        Route::prefix('penggajian')->name('penggajian.')->group(function () {
+        Route::get('/', [PenggajianController::class, 'index'])->name('index');
+        Route::get('/create', [PenggajianController::class, 'create'])->name('create');
+        Route::post('/generate', [PenggajianController::class, 'generate'])->name('generate');
+        Route::get('/bayar', [PenggajianController::class, 'showBayarForm'])->name('bayar.form');
+        Route::post('/bayar', [PenggajianController::class, 'bayar'])->name('bayar');
+        Route::get('/{id}/edit', [PenggajianController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [PenggajianController::class, 'update'])->name('update');
+        Route::delete('/{id}', [PenggajianController::class, 'destroy'])->name('destroy');
         });
 
         Route::prefix('laporan-penggajian')->name('laporan_penggajian.')->group(function () {
@@ -82,27 +86,27 @@ Route::prefix('penggajian')->name('penggajian.')->group(function () {
     });
 });
 
-// Redirect root ke login
-Route::get('/', function () {
-    return redirect()->route('login');
-});
+        // Redirect root ke login
+        Route::get('/', function () {
+            return redirect()->route('login');
+        });
 
-Route::get('/laporan-penggajian/cetak', [LaporanPenggajianController::class, 'cetakPdf'])->name('laporan_penggajian.cetak');
-Route::get('pendapatan', [PendapatanController::class, 'pendapatan'])->name('pendapatan');
+        Route::get('/laporan-penggajian/cetak', [LaporanPenggajianController::class, 'cetakPdf'])->name('laporan_penggajian.cetak');
+        Route::get('pendapatan', [PendapatanController::class, 'pendapatan'])->name('pendapatan');
 
-Route::get('/payment/mock/{orderId}', function ($orderId) {
-    $pesanan = Pesanan::where('id_transaksi', $orderId)->first();
+        Route::get('/payment/mock/{orderId}', function ($orderId) {
+        $pesanan = Pesanan::where('id_transaksi', $orderId)->first();
 
-    if (!$pesanan) {
-        abort(404, 'Order not found');
-    }
+        if (!$pesanan) {
+            abort(404, 'Order not found');
+        }
 
-    // Mock payment success after 3 seconds
-    $pesanan->update([
-        'status_pembayaran' => 'paid',
-        'payment_method' => 'mock_payment',
-        'paid_at' => now(),
-    ]);
+        // Mock payment success after 3 seconds
+        $pesanan->update([
+            'status_pembayaran' => 'paid',
+            'payment_method' => 'mock_payment',
+            'paid_at' => now(),
+        ]);
 
-    return view('mock-payment', compact('pesanan'));
-});
+        return view('mock-payment', compact('pesanan'));
+    });

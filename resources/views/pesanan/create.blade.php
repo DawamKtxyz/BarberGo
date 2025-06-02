@@ -22,27 +22,42 @@
                 </div>
             @endif
 
+            @if($barbers->isEmpty())
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Perhatian!</strong> Tidak ada tukang cukur yang sudah diverifikasi.
+                    Silakan verifikasi tukang cukur terlebih dahulu di menu
+                    <a href="{{ route('tukang_cukur.index') }}" class="alert-link">Kelola Tukang Cukur</a>.
+                </div>
+            @endif
+
             <form action="{{ route('pesanan.store') }}" method="POST">
                 @csrf
 
                 <div class="form-group mb-3">
-                    <label for="id_barber">Tukang Cukur:</label>
-                    <select id="id_barber" name="id_barber" class="form-control @error('id_barber') is-invalid @enderror">
+                    <label for="id_barber">Tukang Cukur: <span class="text-danger">*</span></label>
+                    <select id="id_barber" name="id_barber" class="form-control @error('id_barber') is-invalid @enderror" {{ $barbers->isEmpty() ? 'disabled' : '' }}>
                         <option value="">-- Pilih Tukang Cukur --</option>
                         @foreach($barbers as $barber)
                             <option value="{{ $barber->id }}" {{ old('id_barber') == $barber->id ? 'selected' : '' }}>
                                 {{ $barber->nama }}
+                                @if($barber->is_verified)
+                                    <span class="text-success">(Terverifikasi)</span>
+                                @endif
                             </option>
                         @endforeach
                     </select>
                     @error('id_barber')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
+                    @if($barbers->isEmpty())
+                        <small class="text-muted">Tidak ada tukang cukur yang terverifikasi.</small>
+                    @endif
                 </div>
 
                 <!-- Jadwal Tukang Cukur -->
                 <div class="form-group mb-3" id="jadwal-container" style="display: none;">
-                    <label for="jadwal_id">Jadwal:</label>
+                    <label for="jadwal_id">Jadwal: <span class="text-danger">*</span></label>
                     <select id="jadwal_id" name="jadwal_id" class="form-control @error('jadwal_id') is-invalid @enderror">
                         <option value="">-- Pilih Jadwal --</option>
                     </select>
@@ -55,8 +70,8 @@
                 </div>
 
                 <div class="form-group mb-3">
-                    <label for="id_pelanggan">Pelanggan:</label>
-                    <select id="id_pelanggan" name="id_pelanggan" class="form-control @error('id_pelanggan') is-invalid @enderror">
+                    <label for="id_pelanggan">Pelanggan: <span class="text-danger">*</span></label>
+                    <select id="id_pelanggan" name="id_pelanggan" class="form-control @error('id_pelanggan') is-invalid @enderror" {{ $barbers->isEmpty() ? 'disabled' : '' }}>
                         <option value="">-- Pilih Pelanggan --</option>
                         @foreach($pelanggans as $pelanggan)
                             <option value="{{ $pelanggan->id }}" {{ old('id_pelanggan') == $pelanggan->id ? 'selected' : '' }}>
@@ -71,8 +86,8 @@
 
                 <!-- Kolom email dari pelanggan -->
                 <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" id="email" name="email" class="form-control" value="{{ old('email') }}" readonly>
+                    <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                    <input type="email" id="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email') }}" readonly>
                     @error('email')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -80,8 +95,8 @@
 
                 <!-- Kolom telepon dari pelanggan -->
                 <div class="mb-3">
-                    <label for="telepon" class="form-label">No. Telepon</label>
-                    <input type="text" id="telepon" name="telepon" class="form-control" value="{{ old('telepon') }}" readonly>
+                    <label for="telepon" class="form-label">No. Telepon <span class="text-danger">*</span></label>
+                    <input type="text" id="telepon" name="telepon" class="form-control @error('telepon') is-invalid @enderror" value="{{ old('telepon') }}" readonly>
                     @error('telepon')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -89,8 +104,8 @@
 
                 <!-- Kolom alamat lengkap baru -->
                 <div class="mb-3">
-                    <label for="alamat_lengkap" class="form-label">Alamat Lengkap</label>
-                    <textarea id="alamat_lengkap" name="alamat_lengkap" class="form-control" required>{{ old('alamat_lengkap') }}</textarea>
+                    <label for="alamat_lengkap" class="form-label">Alamat Lengkap <span class="text-danger">*</span></label>
+                    <textarea id="alamat_lengkap" name="alamat_lengkap" class="form-control @error('alamat_lengkap') is-invalid @enderror" rows="3" {{ $barbers->isEmpty() ? 'disabled' : '' }} required>{{ old('alamat_lengkap') }}</textarea>
                     @error('alamat_lengkap')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -98,8 +113,8 @@
 
                 <!-- Nominal dari harga tukang cukur -->
                 <div class="mb-3">
-                    <label for="nominal" class="form-label">Nominal</label>
-                    <input type="number" id="nominal" name="nominal" class="form-control" value="{{ old('nominal') }}" readonly>
+                    <label for="nominal" class="form-label">Nominal <span class="text-danger">*</span></label>
+                    <input type="number" id="nominal" name="nominal" class="form-control @error('nominal') is-invalid @enderror" value="{{ old('nominal') }}" readonly>
                     @error('nominal')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -107,8 +122,8 @@
 
                 <!-- Kolom ongkos kirim baru -->
                 <div class="mb-3">
-                    <label for="ongkos_kirim" class="form-label">Ongkos Kirim</label>
-                    <input type="number" id="ongkos_kirim" name="ongkos_kirim" class="form-control" value="{{ old('ongkos_kirim', 10000) }}" readonly>
+                    <label for="ongkos_kirim" class="form-label">Ongkos Kirim <span class="text-danger">*</span></label>
+                    <input type="number" id="ongkos_kirim" name="ongkos_kirim" class="form-control @error('ongkos_kirim') is-invalid @enderror" value="{{ old('ongkos_kirim', 10000) }}" readonly>
                     @error('ongkos_kirim')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
@@ -116,13 +131,13 @@
 
                 <div class="mb-3">
                     <label for="id_transaksi" class="form-label">ID Transaksi (opsional)</label>
-                    <input type="text" name="id_transaksi" class="form-control" value="{{ old('id_transaksi') }}">
+                    <input type="text" name="id_transaksi" class="form-control @error('id_transaksi') is-invalid @enderror" value="{{ old('id_transaksi') }}" {{ $barbers->isEmpty() ? 'disabled' : '' }}>
                     @error('id_transaksi')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
 
-                <button type="submit" class="btn btn-primary">Simpan</button>
+                <button type="submit" class="btn btn-primary" {{ $barbers->isEmpty() ? 'disabled' : '' }}>Simpan</button>
                 <a href="{{ route('pesanan.index') }}" class="btn btn-secondary">Batal</a>
             </form>
         </div>

@@ -16,17 +16,18 @@ class PesananController extends Controller
         $this->middleware('admin');
     }
 
-public function index()
-{
-    $pesanan = Pesanan::with(['barber', 'pelanggan', 'jadwal'])
-                     ->latest()
-                     ->paginate(10);
-    return view('pesanan.index', compact('pesanan'));
-}
+    public function index()
+    {
+        $pesanan = Pesanan::with(['barber', 'pelanggan', 'jadwal'])
+                         ->latest()
+                         ->paginate(10);
+        return view('pesanan.index', compact('pesanan'));
+    }
 
     public function create()
     {
-        $barbers = TukangCukur::all();
+        // Hanya ambil tukang cukur yang sudah diverifikasi
+        $barbers = TukangCukur::verified()->get();
         $pelanggans = Pelanggan::all();
 
         return view('pesanan.create', compact('barbers', 'pelanggans'));
@@ -64,44 +65,52 @@ public function index()
         return response()->json($jadwal);
     }
 
-public function store(Request $request)
-{
-    $request->validate([
-        'id_barber' => 'required|exists:tukang_cukur,id',
-        'id_pelanggan' => 'required|exists:pelanggan,id',
-        'jadwal_id' => 'required|exists:jadwal_tukang_cukur,id',
-        'nominal' => 'required|numeric',
-        'id_transaksi' => 'nullable|string',
-        'alamat_lengkap' => 'required|string',
-        'ongkos_kirim' => 'required|numeric',
-        'email' => 'required|email',
-        'telepon' => 'required|string',
-    ]);
+    public function store(Request $request)
+    {
+        $request->validate([
+            'id_barber' => 'required|exists:tukang_cukur,id',
+            'id_pelanggan' => 'required|exists:pelanggan,id',
+            'jadwal_id' => 'required|exists:jadwal_tukang_cukur,id',
+            'nominal' => 'required|numeric',
+            'id_transaksi' => 'nullable|string',
+            'alamat_lengkap' => 'required|string',
+            'ongkos_kirim' => 'required|numeric',
+            'email' => 'required|email',
+            'telepon' => 'required|string',
+        ]);
 
-    // Get the selected schedule to use its date
-    $jadwal = JadwalTukangCukur::findOrFail($request->jadwal_id);
+        // Cek apakah barber sudah diverifikasi
+        $barber = TukangCukur::findOrFail($request->id_barber);
+        if (!$barber->is_verified) {
+            return redirect()->back()
+                ->withErrors(['id_barber' => 'Tukang cukur belum diverifikasi.'])
+                ->withInput();
+        }
 
-    // Generate transaction ID if not provided
-    $id_transaksi = $request->id_transaksi ?: 'TRX-' . Str::random(8);
+        // Get the selected schedule to use its date
+        $jadwal = JadwalTukangCukur::findOrFail($request->jadwal_id);
 
-    $pesanan = Pesanan::create([
-        'id_barber' => $request->id_barber,
-        'id_pelanggan' => $request->id_pelanggan,
-        'jadwal_id' => $request->jadwal_id,
-        'tgl_pesanan' => $jadwal->tanggal,
-        'nominal' => $request->nominal,
-        'id_transaksi' => $id_transaksi,
-        'alamat_lengkap' => $request->alamat_lengkap,
-        'ongkos_kirim' => $request->ongkos_kirim,
-        'email' => $request->email,
-        'telepon' => $request->telepon,
-        'status_pembayaran' => 'pending',
-    ]);
+        // Generate transaction ID if not provided
+        $id_transaksi = $request->id_transaksi ?: 'TRX-' . Str::random(8);
 
-    // Redirect to payment process
-    return redirect()->route('pembayaran.show', $pesanan->id)
-        ->with('success', 'Pesanan berhasil dibuat. Silakan lanjutkan ke pembayaran.');
-}
+        $pesanan = Pesanan::create([
+            'id_barber' => $request->id_barber,
+            'id_pelanggan' => $request->id_pelanggan,
+            'jadwal_id' => $request->jadwal_id,
+            'tgl_pesanan' => $jadwal->tanggal,
+            'nominal' => $request->nominal,
+            'id_transaksi' => $id_transaksi,
+            'alamat_lengkap' => $request->alamat_lengkap,
+            'ongkos_kirim' => $request->ongkos_kirim,
+            'email' => $request->email,
+            'telepon' => $request->telepon,
+            'status_pembayaran' => 'pending',
+        ]);
+
+        // Redirect to payment process
+        return redirect()->route('pembayaran.show', $pesanan->id)
+            ->with('success', 'Pesanan berhasil dibuat. Silakan lanjutkan ke pembayaran.');
+    }
 
     public function show(Pesanan $pesanan)
     {
@@ -110,7 +119,8 @@ public function store(Request $request)
 
     public function edit(Pesanan $pesanan)
     {
-        $barbers = TukangCukur::all();
+        // Hanya ambil tukang cukur yang sudah diverifikasi
+        $barbers = TukangCukur::verified()->get();
         $pelanggans = Pelanggan::all();
 
         // Get schedules for the barber
@@ -131,11 +141,19 @@ public function store(Request $request)
             'jadwal_id' => 'required|exists:jadwal_tukang_cukur,id',
             'nominal' => 'required|numeric',
             'id_transaksi' => 'nullable|string',
-            'alamat_lengkap' => 'required|string', // Validasi kolom baru
-            'ongkos_kirim' => 'required|numeric',  // Validasi kolom baru
-            'email' => 'required|email',          // Validasi kolom baru
-            'telepon' => 'required|string',       // Validasi kolom baru
+            'alamat_lengkap' => 'required|string',
+            'ongkos_kirim' => 'required|numeric',
+            'email' => 'required|email',
+            'telepon' => 'required|string',
         ]);
+
+        // Cek apakah barber sudah diverifikasi
+        $barber = TukangCukur::findOrFail($request->id_barber);
+        if (!$barber->is_verified) {
+            return redirect()->back()
+                ->withErrors(['id_barber' => 'Tukang cukur belum diverifikasi.'])
+                ->withInput();
+        }
 
         // Get the selected schedule to use its date
         $jadwal = JadwalTukangCukur::findOrFail($request->jadwal_id);
@@ -143,14 +161,14 @@ public function store(Request $request)
         $pesanan->update([
             'id_barber' => $request->id_barber,
             'id_pelanggan' => $request->id_pelanggan,
-            'jadwal_id' => $request->jadwal_id, // Added this line to save jadwal_id
-            'tgl_pesanan' => $jadwal->tanggal, // Use the date from the selected schedule
+            'jadwal_id' => $request->jadwal_id,
+            'tgl_pesanan' => $jadwal->tanggal,
             'nominal' => $request->nominal,
             'id_transaksi' => $request->id_transaksi,
-            'alamat_lengkap' => $request->alamat_lengkap, // Update kolom baru
-            'ongkos_kirim' => $request->ongkos_kirim,    // Update kolom baru
-            'email' => $request->email,                  // Update kolom baru
-            'telepon' => $request->telepon,              // Update kolom baru
+            'alamat_lengkap' => $request->alamat_lengkap,
+            'ongkos_kirim' => $request->ongkos_kirim,
+            'email' => $request->email,
+            'telepon' => $request->telepon,
         ]);
 
         return redirect()->route('pesanan.index')
