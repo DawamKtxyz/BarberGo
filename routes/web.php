@@ -10,6 +10,7 @@ use App\Http\Controllers\LaporanPenggajianController;
 use App\Http\Controllers\PesananController;
 use App\Http\Controllers\PendapatanController;
 use App\Http\Controllers\PenggajianController;
+use App\Http\Controllers\PembayaranController;
 use App\Models\Pesanan;
 
 // Rute Auth
@@ -51,12 +52,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/pembayaran/{pesanan}', 'App\Http\Controllers\PembayaranController@show')->name('pembayaran.show');
         Route::post('/pembayaran/{pesanan}/process', 'App\Http\Controllers\PembayaranController@process')->name('pembayaran.process');
 
-        // Endpoints untuk callback Midtrans
-        Route::post('/pembayaran/notification', 'App\Http\Controllers\PembayaranController@notification')->name('pembayaran.notification');
-        Route::get('/pembayaran/finish', 'App\Http\Controllers\PembayaranController@finish')->name('pembayaran.finish');
-        Route::get('/pembayaran/unfinish', 'App\Http\Controllers\PembayaranController@unfinish')->name('pembayaran.unfinish');
-        Route::get('/pembayaran/error', 'App\Http\Controllers\PembayaranController@error')->name('pembayaran.error');
-
          // Updated Penggajian routes
         Route::prefix('penggajian')->name('penggajian.')->group(function () {
         Route::get('/', [PenggajianController::class, 'index'])->name('index');
@@ -85,6 +80,16 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::get('/cetak/pdf', [LaporanPenggajianController::class, 'cetakPdf'])->name('cetak_pdf');
     });
 });
+
+
+
+                        // Endpoints untuk callback Midtrans
+        Route::get('/pembayaran/finish/{order_id?}', [PembayaranController::class, 'finish'])
+            ->name('pembayaran.finish');
+        Route::get('/pembayaran/unfinish', [PembayaranController::class, 'unfinish'])->name('pembayaran.unfinish');
+        Route::get('/pembayaran/error', [PembayaranController::class, 'error'])->name('pembayaran.error');
+        Route::post('/pembayaran/notification', [PembayaranController::class, 'notification'])->name('pembayaran.notification');
+
 
         // Redirect root ke login
         Route::get('/', function () {

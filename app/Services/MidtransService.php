@@ -6,6 +6,8 @@ use App\Models\Pesanan;
 use Midtrans\Config;
 use Midtrans\Snap;
 use Midtrans\Notification;
+use Illuminate\Support\Facades\Log;
+
 
 class MidtransService
 {
@@ -19,42 +21,53 @@ class MidtransService
 
     public function createTransaction(Pesanan $pesanan)
     {
+
+        $finishUrl = route('pembayaran.finish');
+        $unfinishUrl = route('pembayaran.unfinish');
+        $errorUrl = route('pembayaran.error');
+
+        // Log untuk debugging
+        Log::info('Midtrans Callback URLs', [
+            'finish' => $finishUrl,
+            'unfinish' => $unfinishUrl,
+            'error' => $errorUrl
+        ]);
         try {
             // Calculate total amount
             $serviceFee = (float) $pesanan->nominal;
             $deliveryFee = (float) $pesanan->ongkos_kirim;
             $totalAmount = $serviceFee + $deliveryFee;
 
-            $params = [
-                'transaction_details' => [
-                    'order_id' => $pesanan->id_transaksi,
-                    'gross_amount' => $totalAmount,
+        $params = [
+            'transaction_details' => [
+                'order_id' => $pesanan->id_transaksi,
+                'gross_amount' => $totalAmount,
+            ],
+            'customer_details' => [
+                'first_name' => $pesanan->pelanggan->nama ?? 'Customer',
+                'email' => $pesanan->email ?? $pesanan->pelanggan->email,
+                'phone' => $pesanan->telepon ?? $pesanan->pelanggan->telepon,
+            ],
+            'item_details' => [
+                [
+                    'id' => 'service-' . $pesanan->id,
+                    'price' => $serviceFee,
+                    'quantity' => 1,
+                    'name' => 'Layanan Barbershop - ' . $pesanan->barber->nama,
                 ],
-                'customer_details' => [
-                    'first_name' => $pesanan->pelanggan->nama ?? 'Customer',
-                    'email' => $pesanan->email ?? $pesanan->pelanggan->email,
-                    'phone' => $pesanan->telepon ?? $pesanan->pelanggan->telepon,
+                [
+                    'id' => 'delivery-' . $pesanan->id,
+                    'price' => $deliveryFee,
+                    'quantity' => 1,
+                    'name' => 'Ongkos Kirim',
                 ],
-                'item_details' => [
-                    [
-                        'id' => 'service-' . $pesanan->id,
-                        'price' => $serviceFee,
-                        'quantity' => 1,
-                        'name' => 'Layanan Barbershop - ' . $pesanan->barber->nama,
-                    ],
-                    [
-                        'id' => 'delivery-' . $pesanan->id,
-                        'price' => $deliveryFee,
-                        'quantity' => 1,
-                        'name' => 'Ongkos Kirim',
-                    ],
-                ],
-                'callbacks' => [
-                    'finish' => url('/payment/finish'),
-                    'unfinish' => url('/payment/unfinish'),
-                    'error' => url('/payment/error'),
-                ],
-            ];
+            ],
+            'callbacks' => [
+                    'finish' => $finishUrl,
+                    'unfinish' => $unfinishUrl,
+                    'error' => $errorUrl,
+            ],
+        ];
 
             $snapToken = Snap::getSnapToken($params);
             $paymentUrl = 'https://app.sandbox.midtrans.com/snap/v2/vtweb/' . $snapToken;

@@ -53,42 +53,64 @@ class PembayaranController extends Controller
         }
     }
 
-    // Method untuk handling saat pembayaran selesai
-    public function finish(Request $request)
-    {
-        $orderId = $request->order_id;
-        $pesanan = Pesanan::where('id_transaksi', $orderId)->first();
+// finish
+// PembayaranController.php
+public function finish(Request $request, $order_id = null)
+{
+    $orderId = $request->get('order_id');
+        if (!$orderId) {
+        return redirect()->route('pesanan.index')->with('error', 'Order ID tidak ditemukan');
+    }
+    $statusCode = $request->get('status_code');
+    $transactionStatus = $request->get('transaction_status');
 
-        if (!$pesanan) {
-            return redirect()->route('pesanan.index')->with('error', 'Pesanan tidak ditemukan');
-        }
-
-        return redirect()->route('pesanan.show', $pesanan->id)->with('success', 'Pembayaran berhasil diproses');
+    if (!$orderId) {
+        return redirect()->route('pesanan.index')->with('error', 'Order ID tidak ditemukan');
     }
 
-    // Method untuk handling saat pembayaran tidak selesai
-    public function unfinish(Request $request)
-    {
-        $orderId = $request->order_id;
-        $pesanan = Pesanan::where('id_transaksi', $orderId)->first();
+    $pesanan = Pesanan::where('id_transaksi', $orderId)->first();
 
-        if (!$pesanan) {
-            return redirect()->route('pesanan.index')->with('error', 'Pesanan tidak ditemukan');
-        }
-
-        return redirect()->route('pesanan.show', $pesanan->id)->with('warning', 'Pembayaran belum selesai');
+    if (!$pesanan) {
+        return redirect()->route('pesanan.index')->with('error', 'Pesanan tidak ditemukan');
     }
 
-    // Method untuk handling saat pembayaran error
-    public function error(Request $request)
-    {
-        $orderId = $request->order_id;
-        $pesanan = Pesanan::where('id_transaksi', $orderId)->first();
-
-        if (!$pesanan) {
-            return redirect()->route('pesanan.index')->with('error', 'Pesanan tidak ditemukan');
-        }
-
-        return redirect()->route('pesanan.show', $pesanan->id)->with('error', 'Pembayaran gagal: ' . $request->get('message', 'Terjadi kesalahan'));
+    // Optional: Update status berdasarkan callback
+    if ($transactionStatus === 'settlement') {
+        $pesanan->update([
+            'status_pembayaran' => 'paid',
+            'paid_at' => now(),
+        ]);
     }
+
+    return view('pembayaran.finish', compact('pesanan'));
+}
+
+// unfinish
+public function unfinish(Request $request)
+{
+    $orderId = $request->order_id;
+    $pesanan = Pesanan::where('id_transaksi', $orderId)->first();
+
+    if (!$pesanan) {
+        return redirect()->route('pesanan.index')->with('error', 'Pesanan tidak ditemukan');
+    }
+
+    return view('pembayaran.unfinish', compact('pesanan'));
+}
+
+// error
+public function error(Request $request)
+{
+    $orderId = $request->order_id;
+    $pesanan = Pesanan::where('id_transaksi', $orderId)->first();
+
+    if (!$pesanan) {
+        return redirect()->route('pesanan.index')->with('error', 'Pesanan tidak ditemukan');
+    }
+
+    $message = $request->get('message', 'Terjadi kesalahan saat memproses pembayaran.');
+
+    return view('pembayaran.error', compact('pesanan', 'message'));
+}
+
 }
