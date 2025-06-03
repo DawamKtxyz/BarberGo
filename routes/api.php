@@ -98,8 +98,8 @@ Route::post('/payment/notification', [PaymentController::class, 'notification'])
 Route::get('/test-midtrans', function() {
     try {
         // Check if Midtrans config exists
-        $serverKey = config('SB-Mid-server-hGu2nY87nIgs3qb-ANZezDh9');
-        $clientKey = config('SB-Mid-client-i03wPNauKIAt9gws');
+        $serverKey = config('midtrans.server_key');
+        $clientKey = config('midtrans.client_key');
 
         if (empty($serverKey) || empty($clientKey)) {
             return response()->json([

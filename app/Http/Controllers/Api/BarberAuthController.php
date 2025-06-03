@@ -64,6 +64,7 @@ class BarberAuthController extends Controller
                 'nama' => $barber->nama,
                 'email' => $barber->email,
                 'telepon' => $barber->telepon,
+                'alamat' => $barber->alamat,
                 'spesialisasi' => $barber->spesialisasi,
                 'sertifikat' => $barber->sertifikat,
                 'harga' => $barber->harga,
@@ -84,6 +85,7 @@ class BarberAuthController extends Controller
             'email' => 'required|string|email|max:255|unique:tukang_cukur,email',
             'password' => ['required', 'string', Password::min(6)],
             'telepon' => 'required|string|max:15',
+            'alamat' => 'required|string|max:500', // Tambahan validasi alamat
             'spesialisasi' => 'nullable|string',
             'harga' => 'nullable|numeric|min:0',
             'nama_bank' => 'required|string|max:100',
@@ -118,6 +120,7 @@ class BarberAuthController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'telepon' => $request->telepon,
+            'alamat' => $request->alamat, // Tambahan field alamat
             'spesialisasi' => $request->spesialisasi,
             'harga' => $harga,
             'nama_bank' => $request->nama_bank,
@@ -136,6 +139,7 @@ class BarberAuthController extends Controller
                 'nama' => $barber->nama,
                 'email' => $barber->email,
                 'telepon' => $barber->telepon,
+                'alamat' => $barber->alamat, // Tambahan field alamat
                 'spesialisasi' => $barber->spesialisasi,
                 'harga' => $barber->harga,
                 'nama_bank' => $barber->nama_bank,
@@ -200,6 +204,7 @@ class BarberAuthController extends Controller
                 'nama' => $barber->nama,
                 'email' => $barber->email,
                 'telepon' => $barber->telepon,
+                'alamat' => $barber->alamat, // Tambahan field alamat
                 'spesialisasi' => $barber->spesialisasi,
                 'sertifikat' => $barber->sertifikat,
                 'harga' => $barber->harga,
@@ -220,6 +225,7 @@ class BarberAuthController extends Controller
         $validator = Validator::make($request->all(), [
             'nama' => 'sometimes|string|max:255',
             'telepon' => 'sometimes|string|max:15',
+            'alamat' => 'sometimes|string|max:500', // Tambahan validasi alamat
             'spesialisasi' => 'sometimes|nullable|string',
             'harga' => 'sometimes|numeric|min:0',
             'nama_bank' => 'sometimes|string|max:100',
@@ -235,7 +241,7 @@ class BarberAuthController extends Controller
         }
 
         $barber->update($request->only([
-            'nama', 'telepon', 'spesialisasi', 'harga', 'nama_bank', 'rekening_barber'
+            'nama', 'telepon', 'alamat', 'spesialisasi', 'harga', 'nama_bank', 'rekening_barber'
         ]));
 
         return response()->json([
@@ -246,6 +252,7 @@ class BarberAuthController extends Controller
                 'nama' => $barber->nama,
                 'email' => $barber->email,
                 'telepon' => $barber->telepon,
+                'alamat' => $barber->alamat, // Tambahan field alamat
                 'spesialisasi' => $barber->spesialisasi,
                 'sertifikat' => $barber->sertifikat,
                 'harga' => $barber->harga,
@@ -258,4 +265,4 @@ class BarberAuthController extends Controller
             ]
         ]);
     }
-}   
+}

@@ -24,25 +24,27 @@ class PenggajianController extends Controller
 
     public function index(Request $request)
     {
-        $query = Penggajian::query();
+        // PERUBAHAN: Join dengan tabel tukang_cukur untuk mendapatkan nama_bank
+        $query = Penggajian::join('tukang_cukur', 'penggajian.nama_barber', '=', 'tukang_cukur.nama')
+                          ->select('penggajian.*', 'tukang_cukur.nama_bank');
 
         if ($request->filled('nama_barber')) {
-            $query->where('nama_barber', 'like', '%' . $request->input('nama_barber') . '%');
+            $query->where('penggajian.nama_barber', 'like', '%' . $request->input('nama_barber') . '%');
         }
 
         if ($request->filled('tanggal_dari')) {
-            $query->whereDate('tanggal_pesanan', '>=', $request->input('tanggal_dari'));
+            $query->whereDate('penggajian.tanggal_pesanan', '>=', $request->input('tanggal_dari'));
         }
 
         if ($request->filled('tanggal_sampai')) {
-            $query->whereDate('tanggal_pesanan', '<=', $request->input('tanggal_sampai'));
+            $query->whereDate('penggajian.tanggal_pesanan', '<=', $request->input('tanggal_sampai'));
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
+            $query->where('penggajian.status', $request->input('status'));
         }
 
-        $penggajian = $query->orderBy('tanggal_pesanan', 'desc')->paginate(10);
+        $penggajian = $query->orderBy('penggajian.tanggal_pesanan', 'desc')->paginate(10);
         $barbers = TukangCukur::pluck('nama', 'nama');
 
         $penggajian->appends($request->query());
@@ -90,81 +92,82 @@ class PenggajianController extends Controller
         }
     }
 
- public function bayar(Request $request)
-{
-    // Debug untuk melihat data yang diterima
-    Log::info('Bayar Gaji Request Data:', $request->all());
+    public function bayar(Request $request)
+    {
+        Log::info('Bayar Gaji Request Data:', $request->all());
 
-    // Validasi dengan pesan error yang lebih jelas
-    $request->validate([
-        'id_gaji' => 'required|array|min:1',
-        'id_gaji.*' => 'required|exists:penggajian,id_gaji',
-        'bukti_transfer' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-    ], [
-        'id_gaji.required' => 'Data gaji yang akan dibayar harus dipilih',
-        'id_gaji.array' => 'Format data gaji tidak valid',
-        'id_gaji.min' => 'Minimal pilih satu data gaji',
-        'id_gaji.*.required' => 'ID gaji tidak boleh kosong',
-        'id_gaji.*.exists' => 'Data gaji tidak ditemukan',
-        'bukti_transfer.required' => 'Bukti transfer harus diupload',
-        'bukti_transfer.image' => 'File harus berupa gambar',
-        'bukti_transfer.mimes' => 'Format file harus JPG, JPEG, atau PNG',
-        'bukti_transfer.max' => 'Ukuran file maksimal 2MB',
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        // Cek apakah semua data gaji masih dalam status 'belum lunas'
-        $gajiData = Penggajian::whereIn('id_gaji', $request->id_gaji)
-                              ->where('status', '!=', 'lunas')
-                              ->get();
-
-        if ($gajiData->count() !== count($request->id_gaji)) {
-            DB::rollBack();
-            return redirect()->route('penggajian.index')
-                ->with('error', 'Beberapa data gaji sudah lunas atau tidak ditemukan');
-        }
-
-        // Simpan file bukti transfer
-        $path = $request->file('bukti_transfer')->store('bukti_transfer', 'public');
-
-        // Update status semua gaji yang dipilih
-        $updatedCount = 0;
-        foreach ($request->id_gaji as $id) {
-            $gaji = Penggajian::find($id);
-            if ($gaji && $gaji->status !== 'lunas') {
-                $gaji->status = 'lunas';
-                $gaji->bukti_transfer = $path;
-                $gaji->save();
-                $updatedCount++;
-            }
-        }
-
-        DB::commit();
-
-        Log::info("Pembayaran gaji berhasil untuk {$updatedCount} data");
-
-        return redirect()->route('penggajian.index')
-            ->with('success', "Pembayaran berhasil dilakukan untuk {$updatedCount} data gaji!");
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Error during payment processing: ' . $e->getMessage(), [
-            'request_data' => $request->all(),
-            'trace' => $e->getTraceAsString()
+        $request->validate([
+            'id_gaji' => 'required|array|min:1',
+            'id_gaji.*' => 'required|exists:penggajian,id_gaji',
+            'bukti_transfer' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        ], [
+            'id_gaji.required' => 'Data gaji yang akan dibayar harus dipilih',
+            'id_gaji.array' => 'Format data gaji tidak valid',
+            'id_gaji.min' => 'Minimal pilih satu data gaji',
+            'id_gaji.*.required' => 'ID gaji tidak boleh kosong',
+            'id_gaji.*.exists' => 'Data gaji tidak ditemukan',
+            'bukti_transfer.required' => 'Bukti transfer harus diupload',
+            'bukti_transfer.image' => 'File harus berupa gambar',
+            'bukti_transfer.mimes' => 'Format file harus JPG, JPEG, atau PNG',
+            'bukti_transfer.max' => 'Ukuran file maksimal 2MB',
         ]);
 
-        return redirect()->route('penggajian.index')
-            ->with('error', 'Pembayaran gagal: ' . $e->getMessage());
-    }
-}
+        try {
+            DB::beginTransaction();
 
+            // PERUBAHAN: Join dengan tukang_cukur untuk mendapatkan nama_bank
+            $gajiData = Penggajian::join('tukang_cukur', 'penggajian.nama_barber', '=', 'tukang_cukur.nama')
+                                  ->select('penggajian.*', 'tukang_cukur.nama_bank')
+                                  ->whereIn('penggajian.id_gaji', $request->id_gaji)
+                                  ->where('penggajian.status', '!=', 'lunas')
+                                  ->get();
+
+            if ($gajiData->count() !== count($request->id_gaji)) {
+                DB::rollBack();
+                return redirect()->route('penggajian.index')
+                    ->with('error', 'Beberapa data gaji sudah lunas atau tidak ditemukan');
+            }
+
+            $path = $request->file('bukti_transfer')->store('bukti_transfer', 'public');
+
+            $updatedCount = 0;
+            foreach ($request->id_gaji as $id) {
+                $gaji = Penggajian::find($id);
+                if ($gaji && $gaji->status !== 'lunas') {
+                    $gaji->status = 'lunas';
+                    $gaji->bukti_transfer = $path;
+                    $gaji->save();
+                    $updatedCount++;
+                }
+            }
+
+            DB::commit();
+
+            Log::info("Pembayaran gaji berhasil untuk {$updatedCount} data");
+
+            return redirect()->route('penggajian.index')
+                ->with('success', "Pembayaran berhasil dilakukan untuk {$updatedCount} data gaji!");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error during payment processing: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->route('penggajian.index')
+                ->with('error', 'Pembayaran gagal: ' . $e->getMessage());
+        }
+    }
 
     public function edit($id)
     {
         try {
-            $penggajian = Penggajian::findOrFail($id);
+            // PERUBAHAN: Join dengan tukang_cukur untuk mendapatkan nama_bank
+            $penggajian = Penggajian::join('tukang_cukur', 'penggajian.nama_barber', '=', 'tukang_cukur.nama')
+                                   ->select('penggajian.*', 'tukang_cukur.nama_bank')
+                                   ->where('penggajian.id_gaji', $id)
+                                   ->firstOrFail();
             return view('penggajian.edit', compact('penggajian'));
         } catch (\Exception $e) {
             return redirect()->route('penggajian.index')
@@ -172,8 +175,7 @@ class PenggajianController extends Controller
         }
     }
 
-
-            /**
+                /**
  * @param \Illuminate\Http\Request $request
          */
     public function update(UpdatePenggajianRequest $request, $id)
@@ -237,50 +239,49 @@ class PenggajianController extends Controller
         ]);
     }
 
-public function showBayarForm(Request $request)
-{
-    $ids = explode(',', $request->get('ids', ''));
+    public function showBayarForm(Request $request)
+    {
+        $ids = explode(',', $request->get('ids', ''));
 
-    // Debug log
-    Log::info('Show Bayar Form - IDs received:', $ids);
+        Log::info('Show Bayar Form - IDs received:', $ids);
 
-    if (empty($ids) || $ids[0] === '' || $ids[0] === null) {
-        return redirect()->route('penggajian.index')
-            ->with('error', 'Tidak ada data gaji yang dipilih.');
+        if (empty($ids) || $ids[0] === '' || $ids[0] === null) {
+            return redirect()->route('penggajian.index')
+                ->with('error', 'Tidak ada data gaji yang dipilih.');
+        }
+
+        $validIds = array_filter($ids, function($id) {
+            return is_numeric($id) && $id > 0;
+        });
+
+        if (empty($validIds)) {
+            return redirect()->route('penggajian.index')
+                ->with('error', 'ID gaji tidak valid.');
+        }
+
+        // PERUBAHAN: Join dengan tukang_cukur untuk mendapatkan nama_bank
+        $selectedGaji = Penggajian::join('tukang_cukur', 'penggajian.nama_barber', '=', 'tukang_cukur.nama')
+                                 ->select('penggajian.*', 'tukang_cukur.nama_bank')
+                                 ->whereIn('penggajian.id_gaji', $validIds)
+                                 ->where('penggajian.status', '!=', 'lunas')
+                                 ->get();
+
+        Log::info('Selected Gaji Count:', ['count' => $selectedGaji->count()]);
+
+        if ($selectedGaji->isEmpty()) {
+            return redirect()->route('penggajian.index')
+                ->with('error', 'Data gaji tidak ditemukan atau sudah lunas.');
+        }
+
+        foreach ($selectedGaji as $gaji) {
+            Log::info('Gaji Data:', [
+                'id_gaji' => $gaji->id_gaji,
+                'nama_barber' => $gaji->nama_barber,
+                'nama_bank' => $gaji->nama_bank, // TAMBAHAN: Log nama_bank
+                'status' => $gaji->status
+            ]);
+        }
+
+        return view('penggajian.bayar_gaji', compact('selectedGaji'));
     }
-
-    // Filter ID yang valid (numerik)
-    $validIds = array_filter($ids, function($id) {
-        return is_numeric($id) && $id > 0;
-    });
-
-    if (empty($validIds)) {
-        return redirect()->route('penggajian.index')
-            ->with('error', 'ID gaji tidak valid.');
-    }
-
-    // Ambil data gaji yang belum lunas
-    $selectedGaji = Penggajian::whereIn('id_gaji', $validIds)
-        ->where('status', '!=', 'lunas')
-        ->get();
-
-    Log::info('Selected Gaji Count:', ['count' => $selectedGaji->count()]);
-
-    if ($selectedGaji->isEmpty()) {
-        return redirect()->route('penggajian.index')
-            ->with('error', 'Data gaji tidak ditemukan atau sudah lunas.');
-    }
-
-    // Debug: Log data yang akan ditampilkan
-    foreach ($selectedGaji as $gaji) {
-        Log::info('Gaji Data:', [
-            'id_gaji' => $gaji->id_gaji,
-            'nama_barber' => $gaji->nama_barber,
-            'status' => $gaji->status
-        ]);
-    }
-
-    return view('penggajian.bayar_gaji', compact('selectedGaji'));
-}
-
 }

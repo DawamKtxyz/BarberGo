@@ -23,6 +23,17 @@
     .btn-group .btn:last-child {
         margin-right: 0;
     }
+
+    /* TAMBAHAN: Style untuk kolom bank */
+    .bank-info {
+        font-size: 0.85rem;
+        color: #495057;
+    }
+
+    .bank-name {
+        font-weight: 600;
+        color: #28a745;
+    }
 </style>
 @endpush
 
@@ -34,7 +45,6 @@
             <a href="{{ route('penggajian.create') }}" class="btn btn-success btn-sm">
                 <i class="fas fa-plus"></i> Generate Gaji
             </a>
-            {{-- PERUBAHAN: Ganti tombol modal dengan tombol yang akan redirect --}}
             <button type="button" class="btn btn-primary btn-sm" id="btnBayar" disabled onclick="redirectToBayarGaji()">
                 <i class="fas fa-money-bill"></i> Bayar Gaji
             </button>
@@ -74,7 +84,7 @@
             </div>
         </form>
 
-        <!-- Tabel - TIDAK BERUBAH -->
+        <!-- Tabel - PERUBAHAN: Tambah kolom Nama Bank -->
         <div class="table-responsive">
             <table class="table table-bordered table-hover">
                 <thead class="table-light">
@@ -91,6 +101,7 @@
                         <th>Total Bayar</th>
                         <th>Potongan (5%)</th>
                         <th>Total Gaji</th>
+                        <th>Nama Bank</th> <!-- TAMBAHAN: Kolom nama bank -->
                         <th>Rekening</th>
                         <th>Status</th>
                         <th>Aksi</th>
@@ -115,6 +126,10 @@
                             <td>Rp {{ number_format($p->total_bayar, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format($p->potongan, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format($p->total_gaji, 0, ',', '.') }}</td>
+                            <!-- TAMBAHAN: Tampilkan nama bank -->
+                            <td>
+                                <span class="bank-name">{{ $p->nama_bank ?? 'Tidak Ada' }}</span>
+                            </td>
                             <td>{{ $p->rekening_barber }}</td>
                             <td>
                                 @if($p->status == 'lunas')
@@ -146,7 +161,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="12" class="text-center">Tidak ada data penggajian</td>
+                            <td colspan="14" class="text-center">Tidak ada data penggajian</td> <!-- PERUBAHAN: colspan dari 12 ke 14 -->
                         </tr>
                     @endforelse
                 </tbody>
@@ -158,8 +173,6 @@
         </div>
     </div>
 </div>
-
-{{-- HAPUS SELURUH MODAL BAYAR GAJI --}}
 
 @push('scripts')
 <script>
